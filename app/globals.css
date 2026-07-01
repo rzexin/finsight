@@ -1,0 +1,316 @@
+@import "tailwindcss";
+
+/* ============================================================
+   FinSight — Light Sci-Fi / Glass-Tech Design System
+   ============================================================ */
+
+:root {
+  /* Surfaces */
+  --bg: #eef3fb;
+  --bg-deep: #e4ecf8;
+  --surface: #ffffff;
+  --surface-2: #f3f7fd;
+  --surface-glass: rgba(255, 255, 255, 0.62);
+  --line: rgba(11, 27, 58, 0.08);
+  --line-strong: rgba(11, 27, 58, 0.14);
+
+  /* Ink */
+  --ink: #0b1b3a;
+  --ink-2: #33436b;
+  --muted: #5a6b8c;
+  --faint: #93a1bd;
+
+  /* Brand */
+  --primary: #0066ff;
+  --cyan: #00d6e0;
+  --violet: #6c5ce7;
+
+  /* Functional — A股习惯：红涨绿跌 */
+  --up: #ff3b46;
+  --down: #11c08b;
+  --warn: #f5a623;
+  --info: #00d6e0;
+
+  --glow-primary: rgba(0, 102, 255, 0.45);
+  --glow-cyan: rgba(0, 214, 224, 0.45);
+
+  /* Font families (provided locally via @fontsource, see app/layout.tsx) */
+  --font-orbitron: "Orbitron";
+  --font-titillium: "Titillium Web";
+  --font-noto-sc: "Noto Sans SC";
+  --font-jbmono: "JetBrains Mono";
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-deep: var(--bg-deep);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+
+  --color-primary: var(--primary);
+  --color-cyan: var(--cyan);
+  --color-violet: var(--violet);
+
+  --color-up: var(--up);
+  --color-down: var(--down);
+  --color-warn: var(--warn);
+  --color-info: var(--info);
+
+  --font-display: var(--font-orbitron), var(--font-titillium), system-ui, sans-serif;
+  --font-sans: var(--font-titillium), var(--font-noto-sc), system-ui, sans-serif;
+  --font-mono: var(--font-jbmono), ui-monospace, monospace;
+}
+
+* {
+  border-color: var(--line);
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "tnum" 1, "cv01" 1;
+  overflow-x: hidden;
+}
+
+/* ---------- Ambient background (grid + aurora) ---------- */
+.fs-aurora {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(60rem 40rem at 12% -8%, rgba(0, 102, 255, 0.16), transparent 60%),
+    radial-gradient(48rem 36rem at 100% 0%, rgba(0, 214, 224, 0.14), transparent 55%),
+    radial-gradient(52rem 40rem at 50% 120%, rgba(108, 92, 231, 0.14), transparent 60%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
+}
+
+.fs-grid {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(to right, rgba(11, 27, 58, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(11, 27, 58, 0.045) 1px, transparent 1px);
+  background-size: 46px 46px;
+  mask-image: radial-gradient(circle at 50% 30%, #000 0%, transparent 78%);
+  -webkit-mask-image: radial-gradient(circle at 50% 30%, #000 0%, transparent 78%);
+}
+
+/* ---------- Glass surfaces ---------- */
+.glass {
+  background: var(--surface-glass);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.8) inset,
+    0 12px 40px -18px rgba(11, 27, 58, 0.28);
+}
+
+.glass-card {
+  position: relative;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(243, 247, 253, 0.7));
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid var(--line);
+  box-shadow: 0 14px 40px -24px rgba(11, 27, 58, 0.4);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.glass-card:hover {
+  border-color: rgba(0, 102, 255, 0.32);
+  box-shadow:
+    0 18px 50px -22px rgba(0, 102, 255, 0.34),
+    0 0 0 1px rgba(0, 102, 255, 0.06);
+}
+
+/* Neon hairline frame */
+.neon-frame {
+  position: relative;
+}
+.neon-frame::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, var(--primary), var(--cyan), var(--violet));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* ---------- Text helpers ---------- */
+.text-gradient {
+  background: linear-gradient(100deg, var(--primary), var(--cyan) 55%, var(--violet));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+}
+
+.kicker {
+  font-family: var(--font-display);
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* ---------- Up / Down ---------- */
+.up {
+  color: var(--up);
+}
+.down {
+  color: var(--down);
+}
+
+/* ---------- Buttons ---------- */
+.btn-neon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 12px;
+  padding: 0.62rem 1.15rem;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(120deg, var(--primary), #2b8bff);
+  box-shadow: 0 10px 26px -10px var(--glow-primary);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+  cursor: pointer;
+}
+.btn-neon:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 34px -10px var(--glow-primary);
+  filter: brightness(1.05);
+}
+.btn-neon:active {
+  transform: translateY(0);
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 12px;
+  padding: 0.6rem 1.05rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  transition: all 0.18s ease;
+  cursor: pointer;
+}
+.btn-ghost:hover {
+  border-color: rgba(0, 102, 255, 0.4);
+  color: var(--primary);
+  background: rgba(0, 102, 255, 0.05);
+}
+
+/* ---------- Chips ---------- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--muted);
+}
+
+/* ---------- Animations ---------- */
+@keyframes fs-pulse {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.06); }
+}
+@keyframes fs-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@keyframes fs-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fs-sweep {
+  from { transform: translateX(-120%); }
+  to { transform: translateX(220%); }
+}
+@keyframes fs-dash {
+  to { stroke-dashoffset: -1000; }
+}
+@keyframes fs-spin-slow {
+  to { transform: rotate(360deg); }
+}
+
+.animate-rise {
+  animation: fs-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.animate-float {
+  animation: fs-float 6s ease-in-out infinite;
+}
+.animate-spin-slow {
+  animation: fs-spin-slow 28s linear infinite;
+}
+
+/* shimmer skeleton */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, var(--surface-2), #e9eef7, var(--surface-2));
+  border-radius: 10px;
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+  animation: fs-sweep 1.4s infinite;
+}
+
+/* ---------- Scrollbar ---------- */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(0, 102, 255, 0.4), rgba(0, 214, 224, 0.4));
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::selection {
+  background: rgba(0, 102, 255, 0.18);
+  color: var(--ink);
+}
