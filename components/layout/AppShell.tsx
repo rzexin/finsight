@@ -21,7 +21,7 @@ const NAV = [
   { href: "/watchlist", label: "观察池", icon: IconEye },
   { href: "/backtest", label: "策略回测", icon: IconFlask },
   { href: "/news", label: "资讯", icon: IconNews },
-  { href: "/glossary", label: "新手帮助", icon: IconHelp },
+  //   { href: "/glossary", label: "新手帮助", icon: IconHelp },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {

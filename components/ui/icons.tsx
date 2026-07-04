@@ -156,3 +156,48 @@ export function IconHelp(props: IconProps) {
     </svg>
   );
 }
+
+export function IconTrendUp(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M3 17l6-6 4 4 7-8" />
+      <path d="M14 6.5h6V12.5" />
+    </svg>
+  );
+}
+
+export function IconTrendDown(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M3 7l6 6 4-4 7 8" />
+      <path d="M14 17.5h6V11.5" />
+    </svg>
+  );
+}
+
+export function IconBars(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M5 19V10M12 19V5M19 19v-7" />
+    </svg>
+  );
+}
+
+export function IconWarnTriangle(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M12 4 22 20H2L12 4Z" strokeLinejoin="round" />
+      <path d="M12 10.5v3.5" />
+      <path d="M12 17.2v.1" />
+    </svg>
+  );
+}
+
+export function IconRefresh(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3" />
+      <path d="M18 3.2v4.5h-4.5M6 20.8v-4.5h4.5" />
+    </svg>
+  );
+}
