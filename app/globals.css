@@ -10,7 +10,7 @@
   --bg-deep: #e4ecf8;
   --surface: #ffffff;
   --surface-2: #f3f7fd;
-  --surface-glass: rgba(255, 255, 255, 0.62);
+  --surface-glass: rgba(255, 255, 255, 0.86);
   --line: rgba(11, 27, 58, 0.08);
   --line-strong: rgba(11, 27, 58, 0.14);
 
@@ -119,6 +119,23 @@ body {
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.8) inset,
     0 12px 40px -18px rgba(11, 27, 58, 0.28);
+}
+/* 当浏览器不支持 backdrop-filter 时（或渲染环境未启用 GPU 合成），
+   半透明背景会让滚动到底下的文字清晰透出。这里提供一个更不透明的
+   兜底背景，保证任何情况下都不会露底。 */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass {
+    background: rgba(255, 255, 255, 0.96);
+  }
+}
+
+/* 固定定位、常驻遮挡滚动内容的顶部状态栏：必须保证任何环境下都不透底，
+   所以背景比普通 .glass 更不透明，不完全依赖 backdrop-filter 的模糊效果。 */
+.glass-header {
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  box-shadow: 0 12px 40px -18px rgba(11, 27, 58, 0.28);
 }
 
 .glass-card {

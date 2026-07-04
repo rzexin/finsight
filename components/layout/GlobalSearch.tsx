@@ -104,7 +104,7 @@ export function GlobalSearch() {
 
   return (
     <div ref={boxRef} className="relative w-full max-w-md">
-      <div className="glass flex items-center gap-2 rounded-xl px-3 py-2 transition focus-within:border-primary/50">
+      <div className="glass-header flex items-center gap-2 rounded-xl border border-line px-3 py-2 transition focus-within:border-primary/50">
         <IconSearch className="shrink-0 text-muted" width={17} height={17} />
         <input
           ref={inputRef}
@@ -137,7 +137,7 @@ export function GlobalSearch() {
       </div>
 
       {open && (q.trim() || loading) && (
-        <div className="glass animate-rise absolute left-0 right-0 top-[calc(100%+8px)] z-50 max-h-[60vh] overflow-auto rounded-xl p-1.5">
+        <div className="glass-header animate-rise absolute left-0 right-0 top-[calc(100%+8px)] z-50 max-h-[60vh] overflow-auto rounded-xl border border-line p-1.5">
           {loading && (
             <div className="px-3 py-3">
               <div className="skeleton h-9 w-full" />

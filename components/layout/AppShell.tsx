@@ -32,7 +32,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="fixed inset-x-0 top-0 z-40">
-        <div className="glass border-b border-line">
+        <div className="glass-header border-b border-line">
           <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-4 px-4 lg:px-8">
             <Link href="/" className="group flex items-center gap-2.5">
               <span className="relative grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-cyan shadow-[0_8px_22px_-8px_var(--glow-primary)]">
