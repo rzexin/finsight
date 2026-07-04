@@ -112,6 +112,9 @@ export interface MarketOverview {
   losers: RankItem[];
   active: RankItem[];
   crypto: RankItem[];
+  /** 港股/美股个股（涨幅+跌幅榜合并），供星图等按市场展示足量个股；东财个股级涨跌榜只覆盖 A 股，故单列。 */
+  hkStocks?: RankItem[];
+  usStocks?: RankItem[];
   breadth?: { up: number; down: number; flat: number };
   updatedAt: number;
 }

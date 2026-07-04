@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { MarketPulse } from "@/components/home/MarketPulse";
+import { MarketStarMap } from "@/components/home/MarketStarMap";
 import {
   IconSpark,
   IconArrow,
@@ -72,7 +72,7 @@ export default function Home() {
         </div>
 
         <div className="animate-rise" style={{ animationDelay: "120ms" }}>
-          <MarketPulse />
+          <MarketStarMap />
         </div>
       </section>
 

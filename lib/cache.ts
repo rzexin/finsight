@@ -23,6 +23,11 @@ export interface SwrOptions<T> {
   shouldCache?: (data: T) => boolean;
 }
 
+/** 只读取当前缓存值，不触发任何刷新；调用方用于「按字段合并新旧结果」等场景。 */
+export function peekCache<T>(key: string): T | undefined {
+  return (store.get(key) as Entry<T> | undefined)?.data;
+}
+
 export async function swrCache<T>(
   key: string,
   fetcher: () => Promise<T>,

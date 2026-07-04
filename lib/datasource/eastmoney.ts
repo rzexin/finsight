@@ -164,7 +164,13 @@ async function fetchFinancials(secid: string): Promise<FinancialMetric[]> {
 }
 
 // ---------------- 榜单 ----------------
-const FS_CN = "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23,m:0+t:81+s:2048";
+// 三地个股榜单的板块筛选条件（东财 clist/get 的 fs 参数）：
+// CN 覆盖沪深京 A 股；HK 覆盖主板+创业板等常规港股；US 覆盖纳斯达克/纽交所/其他。
+const FS_BY_MARKET: Record<"CN" | "HK" | "US", string> = {
+  CN: "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23,m:0+t:81+s:2048",
+  HK: "m:128+t:3,m:128+t:4,m:128+t:1,m:128+t:2",
+  US: "m:105,m:106,m:107",
+};
 
 interface ClistRow {
   f2?: number;
@@ -181,20 +187,21 @@ function normDiff(diff: ClistRow[] | Record<string, ClistRow> | undefined): Clis
 
 export async function getRankList(
   kind: "gainers" | "losers" | "active",
-  pz = 10
+  pz = 10,
+  market: "CN" | "HK" | "US" = "CN"
 ): Promise<RankItem[]> {
   const fid = kind === "active" ? "f6" : "f3";
   const po = kind === "losers" ? 0 : 1;
   const data = await fetchJsonAny<{ data?: { diff?: ClistRow[] | Record<string, ClistRow> } }>(
     (host) =>
       `${host}/api/qt/clist/get?pn=1&pz=${pz}&po=${po}&fid=${fid}` +
-      `&fs=${encodeURIComponent(FS_CN)}&fields=f2,f3,f12,f13,f14&fltt=2`,
+      `&fs=${encodeURIComponent(FS_BY_MARKET[market])}&fields=f2,f3,f12,f13,f14&fltt=2`,
     emHostCandidates(),
     { headers: EM_HEADERS, retries: 1 }
   );
   return normDiff(data.data?.diff).map((r) => ({
     code: r.f12 ?? "",
-    market: (marketFromSecid(`${r.f13}.${r.f12}`) ?? "CN") as Market,
+    market: (marketFromSecid(`${r.f13}.${r.f12}`) ?? market) as Market,
     name: r.f14 ?? "",
     price: num(r.f2),
     changePct: num(r.f3),

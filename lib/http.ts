@@ -9,6 +9,9 @@ const ALLOWED_HOST_SUFFIXES = [
   "api.binance.com",
   "api1.binance.com",
   "api.coingecko.com",
+  // 火币(HTX)行情接口：CoinGecko 免费额度极易被限流(429)、Binance 在国内网络环境下
+  // 经常直接连接失败，火币的公开行情接口连通性更稳定，作为加密行情的兜底数据源。
+  "huobi.pro",
 ];
 
 const DEFAULT_UA =
