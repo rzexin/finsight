@@ -146,3 +146,13 @@ export function IconCheck(props: IconProps) {
     </svg>
   );
 }
+
+export function IconHelp(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9.2 9.5a2.8 2.8 0 1 1 4.4 2.3c-.7.5-1.4.9-1.4 2" />
+      <path d="M12 17.2v.1" />
+    </svg>
+  );
+}

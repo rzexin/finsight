@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import { IconSpark, IconClose } from "@/components/ui/icons";
+import { clampCenterX } from "@/lib/viewport";
 
 interface ExplainResult {
   term: string;
@@ -37,11 +39,6 @@ function extractContext(range: Range): string {
     "p, li, td, th, blockquote, h1, h2, h3, h4, h5, h6"
   );
   return (el?.textContent ?? "").trim().slice(0, 220);
-}
-
-function clampLeft(centerX: number, width: number): number {
-  const margin = 10;
-  return Math.min(Math.max(centerX - width / 2, margin), window.innerWidth - width - margin);
 }
 
 /**
@@ -141,15 +138,17 @@ export function TermExplainPopover({ targetRef }: { targetRef: RefObject<HTMLEle
 
   if (!anchor) return null;
 
-  return (
+  // 用 portal 挂到 body 上，避免研报正文所在祖先卡片的 backdrop-filter/transform
+  // 为 fixed 元素创建新的包含块，导致定位坐标基准错乱、浮层整体偏移
+  return createPortal(
     <>
       {!open && (
         <button
           type="button"
           onMouseDown={(e) => e.preventDefault()}
           onClick={explain}
-          style={{ left: clampLeft(anchor.x, TRIGGER_W), top: Math.max(anchor.top - 40, 8) }}
-          className="term-explain-trigger fixed z-50 flex items-center gap-1.5 rounded-full border border-primary/40 bg-surface/95 px-3 py-1.5 text-[11px] font-semibold text-primary shadow-lg backdrop-blur-md cursor-pointer"
+          style={{ left: clampCenterX(anchor.x, TRIGGER_W), top: Math.max(anchor.top - 40, 8) }}
+          className="selection-explain-trigger fixed z-50 flex items-center gap-1.5 rounded-full border border-primary/40 bg-surface/95 px-3 py-1.5 text-[11px] font-semibold text-primary shadow-lg backdrop-blur-md cursor-pointer"
         >
           <IconSpark width={12} height={12} />
           AI 解释
@@ -159,17 +158,17 @@ export function TermExplainPopover({ targetRef }: { targetRef: RefObject<HTMLEle
         <div
           ref={cardRef}
           style={{
-            left: clampLeft(anchor.x, CARD_W),
+            left: clampCenterX(anchor.x, CARD_W),
             top: Math.min(anchor.bottom + 10, window.innerHeight - 230),
             width: CARD_W,
           }}
-          className="term-explain-card fixed z-50"
+          className="hud-card fixed z-50"
         >
-          <div className="term-explain-scanline" />
-          <span className="term-explain-corner term-explain-corner-tl" />
-          <span className="term-explain-corner term-explain-corner-tr" />
-          <span className="term-explain-corner term-explain-corner-bl" />
-          <span className="term-explain-corner term-explain-corner-br" />
+          <div className="hud-scanline" />
+          <span className="hud-corner hud-corner-tl" />
+          <span className="hud-corner hud-corner-tr" />
+          <span className="hud-corner hud-corner-bl" />
+          <span className="hud-corner hud-corner-br" />
 
           <div className="relative flex items-center justify-between gap-2 border-b border-line px-3.5 py-2.5">
             <span className="flex items-center gap-1.5">
@@ -238,6 +237,7 @@ export function TermExplainPopover({ targetRef }: { targetRef: RefObject<HTMLEle
           </div>
         </div>
       )}
-    </>
+    </>,
+    document.body
   );
 }

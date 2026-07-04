@@ -413,17 +413,17 @@ body {
   animation: fs-sweep 1.4s infinite;
 }
 
-/* ---------- Term Explain Popover (研报划词解释 · 科技感 HUD) ---------- */
-.term-explain-trigger {
+/* ---------- HUD Explain Popover（划词解释 + 术语速查 InfoTip 共用的科技感浮层） ---------- */
+.selection-explain-trigger {
   animation: fs-rise 0.16s ease both;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
-.term-explain-trigger:hover {
+.selection-explain-trigger:hover {
   transform: translateY(-1px);
   box-shadow: 0 10px 24px -10px var(--glow-primary);
 }
 
-.term-explain-card {
+.hud-card {
   border-radius: 14px;
   overflow: hidden;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(243, 247, 253, 0.92));
@@ -437,7 +437,7 @@ body {
   animation: fs-rise 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.term-explain-scanline {
+.hud-scanline {
   position: absolute;
   left: 0;
   right: 0;
@@ -453,7 +453,7 @@ body {
   50% { top: calc(100% - 2px); opacity: 0.35; }
 }
 
-.term-explain-corner {
+.hud-corner {
   position: absolute;
   width: 10px;
   height: 10px;
@@ -461,10 +461,34 @@ body {
   opacity: 0.7;
   pointer-events: none;
 }
-.term-explain-corner-tl { top: -1px; left: -1px; border-right: none; border-bottom: none; border-radius: 4px 0 0 0; }
-.term-explain-corner-tr { top: -1px; right: -1px; border-left: none; border-bottom: none; border-radius: 0 4px 0 0; }
-.term-explain-corner-bl { bottom: -1px; left: -1px; border-right: none; border-top: none; border-radius: 0 0 0 4px; }
-.term-explain-corner-br { bottom: -1px; right: -1px; border-left: none; border-top: none; border-radius: 0 0 4px 0; }
+.hud-corner-tl { top: -1px; left: -1px; border-right: none; border-bottom: none; border-radius: 4px 0 0 0; }
+.hud-corner-tr { top: -1px; right: -1px; border-left: none; border-bottom: none; border-radius: 0 4px 0 0; }
+.hud-corner-bl { bottom: -1px; left: -1px; border-right: none; border-top: none; border-radius: 0 0 0 4px; }
+.hud-corner-br { bottom: -1px; right: -1px; border-left: none; border-top: none; border-radius: 0 0 4px 0; }
+
+/* 常驻的「?」术语速查小图标：个股/回测/观察池/资讯等页面的固定标签旁边使用 */
+.info-tip-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 102, 255, 0.35);
+  background: rgba(0, 102, 255, 0.06);
+  color: var(--primary);
+  font-family: var(--font-display);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+}
+.info-tip-btn:hover {
+  transform: scale(1.12);
+  background: rgba(0, 102, 255, 0.14);
+  box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.1);
+}
 
 /* ---------- Scrollbar ---------- */
 ::-webkit-scrollbar {

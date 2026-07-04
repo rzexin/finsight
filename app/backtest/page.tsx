@@ -14,6 +14,7 @@ import { fmtPct, fmtNum, changeClass, MARKET_BADGE } from "@/lib/format";
 import { MARKET_LABEL, type Market } from "@/types/finsight";
 import type { BacktestResult } from "@/lib/backtest";
 import { IconSpark, IconArrow, IconFlask } from "@/components/ui/icons";
+import { InfoTip } from "@/components/ui/InfoTip";
 
 type Picked = { market: Market; code: string; name: string };
 
@@ -29,14 +30,19 @@ function Metric({
   label,
   value,
   tone,
+  infoTerm,
 }: {
   label: string;
   value: string;
   tone?: string;
+  infoTerm?: string;
 }) {
   return (
     <div className="rounded-xl border border-line bg-surface px-4 py-3">
-      <p className="text-[11px] text-faint">{label}</p>
+      <p className="flex items-center gap-1 text-[11px] text-faint">
+        {label}
+        {infoTerm && <InfoTip term={infoTerm} label={label} />}
+      </p>
       <p className={`tnum mt-1 text-xl font-bold ${tone ?? "text-ink"}`}>
         {value}
       </p>
@@ -128,18 +134,27 @@ export default function BacktestPage() {
             </p>
             <div className="space-y-2">
               {STRATEGIES.map((s) => (
-                <button
+                // 用 div 而非 button 承载整块点击区域，避免和内部 InfoTip 的「?」按钮形成嵌套 <button>
+                <div
                   key={s.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => setStrategy(s.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") setStrategy(s.id);
+                  }}
                   className={`block w-full rounded-lg border px-3 py-2 text-left transition cursor-pointer ${
                     strategy === s.id
                       ? "border-primary/50 bg-primary/5"
                       : "border-line hover:border-primary/30"
                   }`}
                 >
-                  <p className="text-sm font-semibold text-ink">{s.label}</p>
+                  <span className="flex items-center gap-1">
+                    <span className="text-sm font-semibold text-ink">{s.label}</span>
+                    <InfoTip term={s.label} />
+                  </span>
                   <p className="text-[11px] text-muted">{s.desc}</p>
-                </button>
+                </div>
               ))}
             </div>
           </div>
@@ -147,7 +162,10 @@ export default function BacktestPage() {
           {strategy === "ma_cross" && (
             <div className="grid grid-cols-2 gap-3">
               <label className="text-xs text-muted">
-                快线周期
+                <span className="inline-flex items-center gap-1">
+                  快线周期
+                  <InfoTip term="快线周期" />
+                </span>
                 <input
                   type="number"
                   value={fast}
@@ -158,7 +176,10 @@ export default function BacktestPage() {
                 />
               </label>
               <label className="text-xs text-muted">
-                慢线周期
+                <span className="inline-flex items-center gap-1">
+                  慢线周期
+                  <InfoTip term="慢线周期" />
+                </span>
                 <input
                   type="number"
                   value={slow}
@@ -172,7 +193,10 @@ export default function BacktestPage() {
           )}
           {strategy === "breakout" && (
             <label className="block text-xs text-muted">
-              突破窗口 (日)
+              <span className="inline-flex items-center gap-1">
+                突破窗口 (日)
+                <InfoTip term="突破窗口(日)" />
+              </span>
               <input
                 type="number"
                 value={window}
@@ -232,30 +256,36 @@ export default function BacktestPage() {
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   <Metric
                     label="策略总收益"
+                    infoTerm="策略总收益"
                     value={fmtPct(m.totalReturn * 100)}
                     tone={changeClass(m.totalReturn)}
                   />
                   <Metric
                     label="基准(买入持有)"
+                    infoTerm="基准(买入持有)"
                     value={fmtPct(m.benchmarkReturn * 100)}
                     tone={changeClass(m.benchmarkReturn)}
                   />
                   <Metric
                     label="年化收益"
+                    infoTerm="年化收益"
                     value={fmtPct(m.annualizedReturn * 100)}
                     tone={changeClass(m.annualizedReturn)}
                   />
                   <Metric
                     label="最大回撤"
+                    infoTerm="最大回撤"
                     value={fmtPct(m.maxDrawdown * 100)}
                     tone="down"
                   />
                   <Metric
                     label="胜率"
+                    infoTerm="胜率"
                     value={`${(m.winRate * 100).toFixed(0)}%`}
                   />
                   <Metric
                     label="夏普比率"
+                    infoTerm="夏普比率"
                     value={fmtNum(m.sharpe)}
                     tone={changeClass(m.sharpe)}
                   />

@@ -21,6 +21,7 @@ import {
 import { MARKET_LABEL, type Market, type KlinePeriod, type Quote, type FinancialMetric, type Candle, type NewsItem } from "@/types/finsight";
 import type { IndicatorBundle } from "@/lib/indicators";
 import { IconSpark, IconArrow, IconEye } from "@/components/ui/icons";
+import { InfoTip } from "@/components/ui/InfoTip";
 
 const PERIODS: { id: KlinePeriod; label: string }[] = [
   { id: "1d", label: "日K" },
@@ -30,10 +31,24 @@ const PERIODS: { id: KlinePeriod; label: string }[] = [
   { id: "15m", label: "15分" },
 ];
 
-function Stat({ label, value, tone }: { label: string; value: string; tone?: string }) {
+function Stat({
+  label,
+  value,
+  tone,
+  infoTerm,
+}: {
+  label: string;
+  value: string;
+  tone?: string;
+  /** 传入即在标签旁显示「?」速查图标；不传则不展示（如「今开」等日常词不需要解释） */
+  infoTerm?: string;
+}) {
   return (
     <div>
-      <p className="text-[11px] text-faint">{label}</p>
+      <p className="flex items-center gap-1 text-[11px] text-faint">
+        {label}
+        {infoTerm && <InfoTip term={infoTerm} label={label} />}
+      </p>
       <p className={`tnum text-sm font-semibold ${tone ?? "text-ink"}`}>{value}</p>
     </div>
   );
@@ -161,12 +176,12 @@ export function StockDetail({ market, code }: { market: Market; code: string }) 
             <h3 className="mb-3 font-display text-sm font-bold text-ink">技术指标（最新）</h3>
             {ind ? (
               <div className="grid grid-cols-2 gap-y-3 text-sm">
-                <Stat label="MA5 / MA20" value={`${fmtNum(pick(ind.ma5))} / ${fmtNum(pick(ind.ma20))}`} />
-                <Stat label="RSI(14)" value={fmtNum(pick(ind.rsi14))} />
-                <Stat label="MACD DIF/DEA" value={`${fmtNum(pick(ind.macd.dif))} / ${fmtNum(pick(ind.macd.dea))}`} />
-                <Stat label="KDJ J" value={fmtNum(pick(ind.kdj.j))} />
-                <Stat label="BOLL 上轨" value={fmtNum(pick(ind.boll.upper))} tone="up" />
-                <Stat label="BOLL 下轨" value={fmtNum(pick(ind.boll.lower))} tone="down" />
+                <Stat label="MA5 / MA20" infoTerm="MA5 / MA20" value={`${fmtNum(pick(ind.ma5))} / ${fmtNum(pick(ind.ma20))}`} />
+                <Stat label="RSI(14)" infoTerm="RSI(14)" value={fmtNum(pick(ind.rsi14))} />
+                <Stat label="MACD DIF/DEA" infoTerm="MACD DIF/DEA" value={`${fmtNum(pick(ind.macd.dif))} / ${fmtNum(pick(ind.macd.dea))}`} />
+                <Stat label="KDJ J" infoTerm="KDJ J" value={fmtNum(pick(ind.kdj.j))} />
+                <Stat label="BOLL 上轨" infoTerm="BOLL 上轨" value={fmtNum(pick(ind.boll.upper))} tone="up" />
+                <Stat label="BOLL 下轨" infoTerm="BOLL 下轨" value={fmtNum(pick(ind.boll.lower))} tone="down" />
               </div>
             ) : (
               <p className="text-sm text-muted">加载中…</p>
@@ -181,7 +196,7 @@ export function StockDetail({ market, code }: { market: Market; code: string }) 
               {finRes.data && (
                 <div className="grid grid-cols-2 gap-y-3 text-sm">
                   {finRes.data.metrics.slice(0, 10).map((m) => (
-                    <Stat key={m.label} label={m.label} value={fmtMetric(m)} />
+                    <Stat key={m.label} label={m.label} infoTerm={m.label} value={fmtMetric(m)} />
                   ))}
                 </div>
               )}

@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { GlassCard, SectionTitle } from "@/components/ui/GlassCard";
+import { InfoTip } from "@/components/ui/InfoTip";
 import {
   LoadingPanel,
   ErrorPanel,
@@ -43,23 +45,40 @@ const LEVEL_STYLE: Record<SignalLevel, string> = {
 const CFG_FIELDS: {
   key: keyof SignalConfig;
   label: string;
+  infoTerm: string;
   min: number;
   max: number;
   step: number;
 }[] = [
-  { key: "changePct", label: "异动涨跌幅阈值 (%)", min: 1, max: 20, step: 0.5 },
+  { key: "changePct", label: "异动涨跌幅阈值 (%)", infoTerm: "异动", min: 1, max: 20, step: 0.5 },
   {
     key: "breakoutWindow",
     label: "突破/回撤窗口 (日)",
+    infoTerm: "突破窗口(日)",
     min: 5,
     max: 60,
     step: 1,
   },
-  { key: "volMultiple", label: "放量倍数", min: 1.2, max: 5, step: 0.1 },
-  { key: "drawdownPct", label: "回撤预警 (%)", min: 5, max: 40, step: 1 },
+  { key: "volMultiple", label: "放量倍数", infoTerm: "放量", min: 1.2, max: 5, step: 0.1 },
+  { key: "drawdownPct", label: "回撤预警 (%)", infoTerm: "回撤预警", min: 5, max: 40, step: 1 },
 ];
 
+// 信号卡片标题是拼接了具体数值的动态文案（如"MA5 上穿 MA20·金叉"），
+// 按信号类型固定映射到术语库词条，而不是直接对动态文案做模糊匹配
+const SIGNAL_TERM: Record<string, string> = {
+  abnormal: "异动",
+  breakout_up: "突破 / 跌破",
+  breakout_down: "突破 / 跌破",
+  drawdown: "回撤预警",
+  volume_spike: "放量",
+  golden_cross: "金叉",
+  death_cross: "死叉",
+  rsi_high: "超买",
+  rsi_low: "超卖",
+};
+
 export default function WatchlistPage() {
+  const router = useRouter();
   const [watch, setWatch] = useState<WatchItem[]>([]);
   const [config, setConfig] = useState<SignalConfig>(DEFAULT_SIGNAL_CONFIG);
   const [signals, setSignals] = useState<Signal[] | null>(null);
@@ -210,7 +229,10 @@ export default function WatchlistPage() {
             {CFG_FIELDS.map((f) => (
               <div key={f.key}>
                 <div className="mb-1 flex items-center justify-between text-xs">
-                  <span className="text-muted">{f.label}</span>
+                  <span className="flex items-center gap-1 text-muted">
+                    {f.label}
+                    <InfoTip term={f.infoTerm} label={f.label} />
+                  </span>
                   <span className="tnum font-semibold text-primary">
                     {config[f.key]}
                   </span>
@@ -226,9 +248,26 @@ export default function WatchlistPage() {
                 />
               </div>
             ))}
-            <p className="text-[11px] text-faint">
-              同时评估：均线金叉/死叉、RSI 超买超卖（默认 {config.rsiHigh}/
-              {config.rsiLow}）。
+            <p className="flex flex-wrap items-center gap-1 text-[11px] text-faint">
+              <span>同时评估：均线</span>
+              <span className="inline-flex items-center gap-0.5">
+                金叉<InfoTip term="金叉" />
+              </span>
+              <span>/</span>
+              <span className="inline-flex items-center gap-0.5">
+                死叉<InfoTip term="死叉" />
+              </span>
+              <span>、RSI</span>
+              <span className="inline-flex items-center gap-0.5">
+                超买<InfoTip term="超买" />
+              </span>
+              <span>/</span>
+              <span className="inline-flex items-center gap-0.5">
+                超卖<InfoTip term="超卖" />
+              </span>
+              <span>
+                （默认 {config.rsiHigh}/{config.rsiLow}）。
+              </span>
             </p>
             <button
               onClick={evaluate}
@@ -277,10 +316,16 @@ export default function WatchlistPage() {
           {signals && signals.length > 0 && (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {signals.map((s, i) => (
-                <Link
+                // 用 div 承载跳转（而非 <Link> 包裹一切），避免和内部 InfoTip 的「?」按钮形成嵌套可交互元素
+                <div
                   key={i}
-                  href={`/stock/${s.market}/${s.code}`}
-                  className={`rounded-xl border px-4 py-3 transition hover:-translate-y-0.5 ${LEVEL_STYLE[s.level]}`}
+                  role="link"
+                  tabIndex={0}
+                  onClick={() => router.push(`/stock/${s.market}/${s.code}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") router.push(`/stock/${s.market}/${s.code}`);
+                  }}
+                  className={`rounded-xl border px-4 py-3 transition hover:-translate-y-0.5 cursor-pointer ${LEVEL_STYLE[s.level]}`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-bold">
@@ -288,9 +333,12 @@ export default function WatchlistPage() {
                     </span>
                     <span className="text-[10px] opacity-70">{s.code}</span>
                   </div>
-                  <p className="mt-1 text-sm font-semibold">{s.title}</p>
+                  <p className="mt-1 flex items-center gap-1 text-sm font-semibold">
+                    {s.title}
+                    {SIGNAL_TERM[s.type] && <InfoTip term={SIGNAL_TERM[s.type]} />}
+                  </p>
                   <p className="mt-0.5 text-xs opacity-80">{s.detail}</p>
-                </Link>
+                </div>
               ))}
             </div>
           )}

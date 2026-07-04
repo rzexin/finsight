@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { chatComplete } from "@/lib/ai/openai";
 import { swrCache } from "@/lib/cache";
+import { findGlossaryEntry } from "@/lib/glossary";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -88,6 +89,17 @@ export async function POST(req: NextRequest) {
 
   if (!term) {
     return Response.json({ error: "缺少 term" }, { status: 400 });
+  }
+
+  // 常见固定术语优先用人工编写的静态词库：内容可控、即时返回，且不依赖大模型是否配置成功
+  const staticEntry = findGlossaryEntry(term);
+  if (staticEntry) {
+    return Response.json({
+      term,
+      definition: staticEntry.definition,
+      analogy: staticEntry.analogy ?? "",
+      note: staticEntry.note ?? "",
+    });
   }
 
   try {
