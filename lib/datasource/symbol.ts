@@ -11,11 +11,19 @@ export function marketFromSecid(secid: string): Market | null {
   return null;
 }
 
+/** 北交所 / 新三板等：东财 secid 为 0.代码，腾讯行情前缀为 bj */
+export function isBseOrNeeqCode(code: string): boolean {
+  return /^(92|83|87|88|82|80|43)/.test(code.toUpperCase());
+}
+
 /** A股/港股 可由代码确定 secid；美股需联网解析 */
 export function buildSecid(market: Market, code: string): string | null {
   const c = code.toUpperCase();
   if (market === "CN") {
-    if (/^(5|6|9|11|68|110|113|118|15)/.test(c)) return `1.${c}`;
+    // 北交所 92xxxx 等；勿用 ^9 误判为上交所
+    if (isBseOrNeeqCode(c)) return `0.${c}`;
+    // 上交所：主板/科创板/ETF/ B 股等
+    if (/^(5|6|68|688|689|11|110|113|118|15|90|91)/.test(c)) return `1.${c}`;
     return `0.${c}`;
   }
   if (market === "HK") {
@@ -56,10 +64,15 @@ async function emSuggest(input: string): Promise<SymbolRef[]> {
 
 /** 解析 secid（美股等需联网）；带内存缓存 */
 export async function resolveSecid(market: Market, code: string): Promise<string | null> {
-  const direct = buildSecid(market, code);
-  if (direct) return direct;
   const key = `${market}:${code.toUpperCase()}`;
   if (secidCache.has(key)) return secidCache.get(key)!;
+
+  const direct = buildSecid(market, code);
+  if (direct) {
+    secidCache.set(key, direct);
+    return direct;
+  }
+
   const list = await emSuggest(code);
   const hit =
     list.find((s) => s.market === market && s.code.toUpperCase() === code.toUpperCase()) ??

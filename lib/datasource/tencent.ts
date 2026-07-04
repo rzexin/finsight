@@ -2,7 +2,7 @@
 // 覆盖 A股 / 港股 / 美股 的实时行情与日/周/月 K线（加密仍走 Binance）
 
 import { fetchText, fetchJson } from "@/lib/http";
-import { buildSecid, resolveSecid } from "@/lib/datasource/symbol";
+import { buildSecid, isBseOrNeeqCode, resolveSecid } from "@/lib/datasource/symbol";
 import type { Candle, KlinePeriod, Quote, SymbolRef } from "@/types/finsight";
 
 const num = (v: unknown): number => {
@@ -19,7 +19,7 @@ function secidToTx(secid: string): string | null {
   const prefix = secid.slice(0, dot);
   const code = secid.slice(dot + 1);
   if (prefix === "1") return `sh${code}`;
-  if (prefix === "0") return `sz${code}`;
+  if (prefix === "0") return isBseOrNeeqCode(code) ? `bj${code}` : `sz${code}`;
   if (prefix === "116" || prefix === "128") return `hk${code}`;
   if (prefix === "105" || prefix === "106" || prefix === "107") return `us${code.toUpperCase()}`;
   return null;

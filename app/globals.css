@@ -269,6 +269,53 @@ body {
 @keyframes fs-spin-slow {
   to { transform: rotate(360deg); }
 }
+@keyframes fs-star-breathe {
+  0%, 100% { opacity: 0.55; r: inherit; }
+  50% { opacity: 1; }
+}
+@keyframes fs-hub-pulse {
+  0%, 100% { opacity: 0.35; stroke-width: 2; }
+  50% { opacity: 0.75; stroke-width: 3; }
+}
+@keyframes fs-orbit-drift {
+  0%, 100% { stroke-opacity: 0.1; }
+  50% { stroke-opacity: 0.22; }
+}
+@keyframes fs-particle-twinkle {
+  0%, 100% { opacity: 0.12; }
+  50% { opacity: 0.45; }
+}
+
+.star-map-svg .star-map-hub-ring {
+  animation: fs-hub-pulse 3s ease-in-out infinite;
+  transform-origin: center;
+  transform-box: fill-box;
+}
+.star-map-svg .star-map-hub-core {
+  animation: fs-pulse 2.8s ease-in-out infinite;
+  transform-origin: center;
+  transform-box: fill-box;
+}
+.star-map-svg .star-map-node-core {
+  animation: fs-pulse 3.6s ease-in-out infinite;
+  transform-origin: center;
+  transform-box: fill-box;
+}
+.star-map-svg .star-map-orbit {
+  animation: fs-orbit-drift 5s ease-in-out infinite;
+}
+.star-map-svg .star-map-particle {
+  animation: fs-particle-twinkle 4s ease-in-out infinite;
+}
+.star-map-svg .star-map-bg-pulse {
+  animation: fs-pulse 6s ease-in-out infinite;
+  transform-origin: center;
+  transform-box: fill-box;
+}
+.star-map-node:hover .star-map-node-core,
+.star-map-node:hover .star-map-hub-core {
+  animation-duration: 1.2s;
+}
 
 .animate-rise {
   animation: fs-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
