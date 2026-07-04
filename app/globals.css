@@ -269,6 +269,10 @@ body {
 @keyframes fs-spin-slow {
   to { transform: rotate(360deg); }
 }
+@keyframes fs-evidence-flash {
+  0% { background-color: color-mix(in srgb, var(--primary) 16%, transparent); border-color: var(--primary); }
+  100% { background-color: transparent; border-color: var(--line); }
+}
 .star-map-canvas-wrap {
   touch-action: none;
 }
@@ -389,6 +393,9 @@ body {
 }
 .animate-spin-slow {
   animation: fs-spin-slow 28s linear infinite;
+}
+.animate-evidence-flash {
+  animation: fs-evidence-flash 1.5s ease-out forwards;
 }
 
 /* shimmer skeleton */

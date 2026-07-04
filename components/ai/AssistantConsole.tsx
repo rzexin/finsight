@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Markdown } from "@/components/ai/Markdown";
+import { EvidencePanel, type EvidenceItem } from "@/components/ai/EvidencePanel";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { IconSpark, IconArrow, IconBolt, IconDownload, IconCopy, IconCheck, IconClose } from "@/components/ui/icons";
 
@@ -44,6 +45,7 @@ interface Msg {
 interface TimelineItem {
   kind: "status" | "tool";
   text: string;
+  id?: string;
   name?: string;
   ok?: boolean;
   pending?: boolean;
@@ -59,6 +61,39 @@ const TOOL_LABEL: Record<string, string> = {
   run_backtest: "运行策略回测",
 };
 
+// 证据编号 [E1] 只在应用内可点击跳转，导出为静态 PDF/Markdown 后失去意义，需去除
+const stripEvidenceMarks = (md: string) => md.replace(/\s?\[E\d+\]/g, "");
+
+// 按市场标注实际数据源提供方（与 lib/datasource 的真实取数逻辑保持一致）
+const marketSource = (market?: string) =>
+  market === "CRYPTO" ? "币安 Binance" : "东方财富（腾讯财经备用）";
+
+// 各工具的数据来源标注：用于证据面板展示「数据源提供方」，帮助用户判断数据可信度
+function sourceOf(name: string, args: Record<string, unknown>): string {
+  switch (name) {
+    case "search_symbol":
+      return "东方财富";
+    case "get_quote": {
+      const tokens = Array.isArray(args.symbols) ? (args.symbols as string[]) : [];
+      const markets = Array.from(new Set(tokens.map((t) => t.split(":")[0])));
+      if (markets.length === 0) return marketSource();
+      return Array.from(new Set(markets.map((m) => marketSource(m)))).join(" + ");
+    }
+    case "get_kline":
+      return marketSource(args.market as string | undefined);
+    case "get_indicators":
+      return `${marketSource(args.market as string | undefined)} · 本地计算指标`;
+    case "get_financials":
+      return "东方财富";
+    case "get_news":
+      return "东方财富";
+    case "run_backtest":
+      return `${marketSource(args.market as string | undefined)} · 本地回测引擎`;
+    default:
+      return "";
+  }
+}
+
 const SUGGESTIONS = [
   "分析贵州茅台当前的技术面和估值，给出研判",
   "对比腾讯控股与阿里巴巴的近期走势",
@@ -72,6 +107,9 @@ export function AssistantConsole() {
   const [input, setInput] = useState("");
   const [running, setRunning] = useState(false);
   const [timeline, setTimeline] = useState<TimelineItem[]>([]);
+  const [evidences, setEvidences] = useState<EvidenceItem[]>([]);
+  const [evidenceOpen, setEvidenceOpen] = useState(false);
+  const [activeEvidenceId, setActiveEvidenceId] = useState<string | null>(null);
   const [report, setReport] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -89,6 +127,9 @@ export function AssistantConsole() {
       setReport("");
       reportRef.current = "";
       setTimeline([]);
+      setEvidences([]);
+      setEvidenceOpen(false);
+      setActiveEvidenceId(null);
       setViewIndex(null);
       const history = [...messages, { role: "user" as const, content: text }];
       setMessages(history);
@@ -115,24 +156,45 @@ export function AssistantConsole() {
           case "status":
             setTimeline((t) => [...t, { kind: "status", text: String(ev.text) }]);
             break;
-          case "tool_call":
-            setTimeline((t) => [
-              ...t,
-              { kind: "tool", name: String(ev.name), text: TOOL_LABEL[String(ev.name)] ?? String(ev.name), pending: true },
+          case "tool_call": {
+            const id = String(ev.id);
+            const name = String(ev.name);
+            const label = TOOL_LABEL[name] ?? name;
+            setTimeline((t) => [...t, { kind: "tool", id, name, text: label, pending: true }]);
+            const args = (ev.args as Record<string, unknown>) ?? {};
+            setEvidences((e) => [
+              ...e,
+              {
+                id,
+                name,
+                label,
+                source: sourceOf(name, args),
+                args,
+                brief: "",
+                ok: false,
+                pending: true,
+                data: null,
+              },
             ]);
             break;
-          case "tool_result":
+          }
+          case "tool_result": {
+            const id = String(ev.id);
             setTimeline((t) => {
               const copy = [...t];
-              for (let i = copy.length - 1; i >= 0; i--) {
-                if (copy[i].kind === "tool" && copy[i].name === ev.name && copy[i].pending) {
-                  copy[i] = { ...copy[i], pending: false, ok: Boolean(ev.ok), text: `${copy[i].text} · ${ev.brief}` };
-                  break;
-                }
-              }
+              const i = copy.findIndex((x) => x.kind === "tool" && x.id === id);
+              if (i >= 0) copy[i] = { ...copy[i], pending: false, ok: Boolean(ev.ok), text: `${copy[i].text} · ${ev.brief}` };
               return copy;
             });
+            setEvidences((e) =>
+              e.map((it) =>
+                it.id === id
+                  ? { ...it, pending: false, ok: Boolean(ev.ok), brief: String(ev.brief), data: ev.data }
+                  : it
+              )
+            );
             break;
+          }
           case "token":
             reportRef.current += String(ev.text);
             setReport(reportRef.current);
@@ -252,7 +314,7 @@ export function AssistantConsole() {
 
   const downloadMarkdown = () => {
     if (!liveReport) return;
-    const blob = new Blob([liveReport], { type: "text/markdown;charset=utf-8" });
+    const blob = new Blob([stripEvidenceMarks(liveReport)], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -266,7 +328,7 @@ export function AssistantConsole() {
   const copyReport = async () => {
     if (!liveReport) return;
     try {
-      await navigator.clipboard.writeText(liveReport);
+      await navigator.clipboard.writeText(stripEvidenceMarks(liveReport));
       setCopied(true);
       setTimeout(() => setCopied(false), 1600);
     } catch {
@@ -286,8 +348,11 @@ export function AssistantConsole() {
       s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     const stamp = new Date().toLocaleString("zh-CN", { hour12: false });
     const header = `<header class="report-header"><h1>${esc(reportTitle)}</h1><div class="report-meta">FinSight 投研助手 · 生成于 ${stamp}</div></header>`;
+    // 证据徽章仅在应用内可点击跳转，静态 PDF 中无实际意义，导出前移除
+    const clone = node.cloneNode(true) as HTMLElement;
+    clone.querySelectorAll("[data-evidence-id]").forEach((el) => el.remove());
     w.document.write(
-      `<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>${esc(reportTitle)}</title><style>${PRINT_CSS}</style></head><body><div class="report fs-markdown">${header}${node.innerHTML}</div></body></html>`
+      `<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>${esc(reportTitle)}</title><style>${PRINT_CSS}</style></head><body><div class="report fs-markdown">${header}${clone.innerHTML}</div></body></html>`
     );
     w.document.close();
     w.focus();
@@ -420,7 +485,7 @@ export function AssistantConsole() {
       </div>
 
       {/* 右：研报 */}
-      <GlassCard neon className="flex h-[calc(100vh-220px)] min-h-[480px] flex-col p-0">
+      <GlassCard neon className="relative flex h-[calc(100vh-220px)] min-h-[480px] flex-col overflow-hidden p-0">
         <div className="flex items-center justify-between border-b border-line px-5 py-3">
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-down" style={{ animation: running ? "fs-pulse 1.4s infinite" : "none" }} />
@@ -429,11 +494,26 @@ export function AssistantConsole() {
               <span className="rounded-full border border-line bg-surface-2 px-2 py-0.5 text-[10px] text-muted">历史回看</span>
             )}
           </div>
-          {running ? (
-            <span className="text-[11px] text-muted">生成中…</span>
-          ) : (
-            hasReport && (
-              <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5">
+            {evidences.length > 0 && (
+              <button
+                onClick={() => setEvidenceOpen((v) => !v)}
+                title="查看本次研报的证据链"
+                className={`flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-[11px] font-medium transition cursor-pointer ${
+                  evidenceOpen
+                    ? "border-primary/50 bg-primary/10 text-primary"
+                    : "border-line bg-surface text-ink-2 hover:border-primary/40 hover:bg-primary/5"
+                }`}
+              >
+                <IconCheck width={12} height={12} />
+                证据 {evidences.length}
+              </button>
+            )}
+            {running ? (
+              <span className="text-[11px] text-muted">生成中…</span>
+            ) : (
+              hasReport && (
+                <>
                 <button
                   onClick={copyReport}
                   title="复制 Markdown"
@@ -458,9 +538,10 @@ export function AssistantConsole() {
                   <IconDownload width={13} height={13} />
                   PDF
                 </button>
-              </div>
-            )
-          )}
+                </>
+              )
+            )}
+          </div>
         </div>
         <div className="flex-1 overflow-auto px-5 py-4">
           {error && (
@@ -480,12 +561,26 @@ export function AssistantConsole() {
           )}
           {liveReport && (
             <div ref={reportContentRef}>
-              <Markdown content={liveReport} />
+              <Markdown
+                content={liveReport}
+                onEvidenceClick={(id) => {
+                  setEvidenceOpen(true);
+                  // 附加时间戳保证重复点击同一证据也能重新触发高亮
+                  setActiveEvidenceId(`${id}:${Date.now()}`);
+                }}
+              />
             </div>
           )}
           {running && liveReport && <span className="ml-0.5 inline-block h-4 w-1.5 animate-pulse bg-primary align-middle" />}
           <div ref={reportEndRef} />
         </div>
+        {evidenceOpen && (
+          <EvidencePanel
+            items={evidences}
+            activeId={activeEvidenceId}
+            onClose={() => setEvidenceOpen(false)}
+          />
+        )}
       </GlassCard>
     </div>
   );

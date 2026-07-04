@@ -15,11 +15,17 @@ function safeHref(href: string): string | null {
   return null;
 }
 
-function renderInline(text: string, keyPrefix: string): ReactNode[] {
+export type EvidenceClickHandler = (id: string) => void;
+
+function renderInline(
+  text: string,
+  keyPrefix: string,
+  onEvidenceClick?: EvidenceClickHandler
+): ReactNode[] {
   const nodes: ReactNode[] = [];
-  // 链接 | 粗体 | 删除线 | 斜体 | 行内代码
+  // 证据编号 [E1] | 链接 | 粗体 | 删除线 | 斜体 | 行内代码
   const regex =
-    /(\[[^\]]+\]\([^)\s]+\)|\*\*[^*]+\*\*|__[^_]+__|~~[^~]+~~|\*[^*]+\*|_[^_]+_|`[^`]+`)/g;
+    /(\[E\d+\]|\[[^\]]+\]\([^)\s]+\)|\*\*[^*]+\*\*|__[^_]+__|~~[^~]+~~|\*[^*]+\*|_[^_]+_|`[^`]+`)/g;
   let last = 0;
   let i = 0;
   let m: RegExpExecArray | null;
@@ -30,7 +36,22 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
     if (m.index > last) pushText(text.slice(last, m.index));
     const tok = m[0];
     const k = `${keyPrefix}-i-${i++}`;
-    if (tok.startsWith("[")) {
+    const em = /^\[(E\d+)\]$/.exec(tok);
+    if (em) {
+      const id = em[1];
+      nodes.push(
+        <button
+          key={k}
+          type="button"
+          data-evidence-id={id}
+          onClick={() => onEvidenceClick?.(id)}
+          title={`查看证据 ${id}`}
+          className="mx-0.5 inline-flex h-[15px] min-w-[15px] translate-y-[-3px] cursor-pointer items-center justify-center rounded-full border border-primary/40 bg-primary/10 px-1 text-[9px] font-bold text-primary align-middle transition hover:border-primary hover:bg-primary/25"
+        >
+          {id.slice(1)}
+        </button>
+      );
+    } else if (tok.startsWith("[")) {
       const lm = /^\[([^\]]+)\]\(([^)\s]+)\)$/.exec(tok);
       const href = lm ? safeHref(lm[2]) : null;
       if (lm && href) {
@@ -127,7 +148,13 @@ const alignCls: Record<Align, string> = {
   right: "text-right",
 };
 
-export function Markdown({ content }: { content: string }) {
+export function Markdown({
+  content,
+  onEvidenceClick,
+}: {
+  content: string;
+  onEvidenceClick?: EvidenceClickHandler;
+}) {
   const lines = content.replace(/\r\n/g, "\n").split("\n");
   const blocks: ReactNode[] = [];
   let i = 0;
@@ -187,7 +214,7 @@ export function Markdown({ content }: { content: string }) {
                     key={c}
                     className={`border-b border-line px-3 py-2 font-semibold text-ink ${colCls(c)}`}
                   >
-                    {renderInline(h, `th-${key}-${c}`)}
+                    {renderInline(h, `th-${key}-${c}`, onEvidenceClick)}
                   </th>
                 ))}
               </tr>
@@ -200,7 +227,7 @@ export function Markdown({ content }: { content: string }) {
                       key={c}
                       className={`border-b border-line/60 px-3 py-2 text-ink-2 ${colCls(c)}`}
                     >
-                      {renderInline(r[c] ?? "", `td-${key}-${ri}-${c}`)}
+                      {renderInline(r[c] ?? "", `td-${key}-${ri}-${c}`, onEvidenceClick)}
                     </td>
                   ))}
                 </tr>
@@ -233,7 +260,7 @@ export function Markdown({ content }: { content: string }) {
           {level <= 2 && (
             <span className="h-3.5 w-1 shrink-0 rounded-full bg-gradient-to-b from-primary to-cyan" />
           )}
-          <span>{renderInline(h[2], k)}</span>
+          <span>{renderInline(h[2], k, onEvidenceClick)}</span>
         </div>
       );
       i++;
@@ -253,7 +280,7 @@ export function Markdown({ content }: { content: string }) {
           key={k}
           className="my-3 rounded-r-lg border-l-2 border-primary/50 bg-primary/5 px-3 py-2 text-xs text-muted"
         >
-          {renderInline(quote.join(" "), k)}
+          {renderInline(quote.join(" "), k, onEvidenceClick)}
         </blockquote>
       );
       continue;
@@ -274,7 +301,7 @@ export function Markdown({ content }: { content: string }) {
         });
         i++;
       }
-      blocks.push(<Fragment key={nk()}>{renderList(items, 0, `ls-${key}`)}</Fragment>);
+      blocks.push(<Fragment key={nk()}>{renderList(items, 0, `ls-${key}`, onEvidenceClick)}</Fragment>);
       continue;
     }
 
@@ -296,7 +323,7 @@ export function Markdown({ content }: { content: string }) {
     const k = nk();
     blocks.push(
       <p key={k} className="my-2 text-sm leading-relaxed text-ink-2">
-        {renderInline(para.join(" "), k)}
+        {renderInline(para.join(" "), k, onEvidenceClick)}
       </p>
     );
   }
@@ -308,7 +335,8 @@ export function Markdown({ content }: { content: string }) {
 function renderList(
   items: { indent: number; ordered: boolean; text: string }[],
   start: number,
-  keyPrefix: string
+  keyPrefix: string,
+  onEvidenceClick?: EvidenceClickHandler
 ): ReactNode {
   if (start >= items.length) return null;
   const baseIndent = items[start].indent;
@@ -326,10 +354,10 @@ function renderList(
     let j = i + 1;
     while (j < items.length && items[j].indent > baseIndent) j++;
     const children =
-      j > i + 1 ? renderList(items, i + 1, `${keyPrefix}-${i}c`) : null;
+      j > i + 1 ? renderList(items, i + 1, `${keyPrefix}-${i}c`, onEvidenceClick) : null;
     lis.push(
       <li key={`${keyPrefix}-${i}`} className="pl-0.5">
-        <span>{renderInline(current.text, `${keyPrefix}-${i}t`)}</span>
+        <span>{renderInline(current.text, `${keyPrefix}-${i}t`, onEvidenceClick)}</span>
         {children}
       </li>
     );

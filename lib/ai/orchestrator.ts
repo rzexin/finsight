@@ -3,11 +3,18 @@ import { TOOL_SPECS, executeTool } from "@/lib/ai/tools";
 
 export type AgentEvent =
   | { type: "status"; text: string }
-  | { type: "tool_call"; name: string; args: Record<string, unknown> }
-  | { type: "tool_result"; name: string; ok: boolean; brief: string }
+  | { type: "tool_call"; id: string; name: string; args: Record<string, unknown> }
+  | { type: "tool_result"; id: string; name: string; ok: boolean; brief: string; data: unknown }
   | { type: "token"; text: string }
   | { type: "done" }
   | { type: "error"; message: string };
+
+interface EvidenceEntry {
+  id: string;
+  name: string;
+  args: Record<string, unknown>;
+  brief: string;
+}
 
 const MAX_ROUNDS = 5;
 
@@ -21,6 +28,8 @@ function systemPrompt(): string {
     "2. 当用户提到某个标的但你不确定其市场与代码时，先用 search_symbol 解析。",
     "3. 做个股研究时，尽量综合调用 get_quote、get_kline/get_indicators、get_financials、get_news，必要时 run_backtest。",
     "4. 数据缺失或工具失败时如实说明，不要用假设数据填充。",
+    "5. 正文中每一个来自工具的关键数字或结论后面，必须紧跟对应的证据编号，格式为 [E1]、[E2]...",
+    "   证据编号会在调用完工具后以「可用证据」列表提供给你，禁止编造列表中不存在的编号，也不要在没有证据支撑的地方乱标编号。",
     "输出格式（Markdown，中文）：",
     "## 核心结论（先给观点与置信度）",
     "## 行情与趋势",
@@ -44,6 +53,8 @@ export async function* runAgent(userMessages: ChatMessage[]): AsyncGenerator<Age
   }
 
   const messages: ChatMessage[] = [{ role: "system", content: systemPrompt() }, ...userMessages];
+  const evidences: EvidenceEntry[] = [];
+  let evidenceSeq = 0;
 
   try {
     // ---- 工具调研阶段 ----
@@ -62,9 +73,11 @@ export async function* runAgent(userMessages: ChatMessage[]): AsyncGenerator<Age
         } catch {
           args = {};
         }
-        yield { type: "tool_call", name: tc.function.name, args };
+        const id = `E${++evidenceSeq}`;
+        yield { type: "tool_call", id, name: tc.function.name, args };
         const outcome = await executeTool(tc.function.name, args);
-        yield { type: "tool_result", name: tc.function.name, ok: outcome.ok, brief: outcome.brief };
+        yield { type: "tool_result", id, name: tc.function.name, ok: outcome.ok, brief: outcome.brief, data: outcome.data };
+        if (outcome.ok) evidences.push({ id, name: tc.function.name, args, brief: outcome.brief });
         messages.push({
           role: "tool",
           tool_call_id: tc.id,
@@ -76,9 +89,14 @@ export async function* runAgent(userMessages: ChatMessage[]): AsyncGenerator<Age
 
     // ---- 研报合成阶段（流式） ----
     yield { type: "status", text: "正在生成研报…" };
+    const evidenceTable =
+      evidences.length > 0
+        ? "可用证据编号（正文中用 [E1] 这类编号引用，禁止编造列表外的编号）：\n" +
+          evidences.map((e) => `${e.id} = ${e.name}(${JSON.stringify(e.args)}) → ${e.brief}`).join("\n")
+        : "本次未成功获取到工具数据，正文中不要标注任何证据编号。";
     messages.push({
       role: "user",
-      content: "请基于以上获取到的真实数据，按要求的 Markdown 结构输出最终研报。",
+      content: `请基于以上获取到的真实数据，按要求的 Markdown 结构输出最终研报。\n\n${evidenceTable}`,
     });
     for await (const delta of chatStream({ messages, toolChoice: "none" })) {
       yield { type: "token", text: delta };
