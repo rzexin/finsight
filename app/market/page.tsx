@@ -32,7 +32,7 @@ const INDEX_CURRENCY: Record<string, string> = {
 };
 
 /** 按 (市场, Tab) 从 overview 中取出对应榜单；CN 沿用原有字段，HK/US 取新增的分市场字段。 */
-function pickRankData(data: MarketOverview | undefined, market: StockMarket, tab: Tab): RankItem[] {
+function pickRankData(data: MarketOverview | null | undefined, market: StockMarket, tab: Tab): RankItem[] {
   if (!data) return [];
   const key = {
     CN: { gainers: data.gainers, losers: data.losers, active: data.active, marketCap: data.marketCap },
