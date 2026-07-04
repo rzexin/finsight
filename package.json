@@ -13,10 +13,13 @@
     "@fontsource/noto-sans-sc": "^5.2.9",
     "@fontsource/orbitron": "^5.2.8",
     "@fontsource/titillium-web": "^5.2.8",
+    "@types/d3-force": "^3.0.10",
+    "d3-force": "^3.0.0",
     "lightweight-charts": "^4.2.0",
     "next": "16.2.9",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "react-force-graph-2d": "^1.29.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
