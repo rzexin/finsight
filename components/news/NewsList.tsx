@@ -6,8 +6,17 @@ import { timeAgo } from "@/lib/format";
 function sentimentBadge(s?: number) {
   if (s == null) return null;
   const tone = s > 0.15 ? "bg-up/10 text-up" : s < -0.15 ? "bg-down/10 text-down" : "bg-muted/10 text-muted";
+  const emoji = s > 0.15 ? "📈" : s < -0.15 ? "📉" : "➖";
   const label = s > 0.15 ? "偏多" : s < -0.15 ? "偏空" : "中性";
-  return <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${tone}`}>{label}</span>;
+  return (
+    <span
+      title={`AI 情绪分：${s.toFixed(2)}`}
+      className={`inline-flex shrink-0 items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${tone}`}
+    >
+      <span aria-hidden>{emoji}</span>
+      {label}
+    </span>
+  );
 }
 
 export function NewsList({ items, compact = false }: { items: NewsItem[]; compact?: boolean }) {
