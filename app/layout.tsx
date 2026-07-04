@@ -19,9 +19,9 @@ import "./globals.css";
 import { AppShell } from "@/components/layout/AppShell";
 
 export const metadata: Metadata = {
-  title: "FinSight · 个人投资者智能投研驾驶舱",
+  title: "FinSight · 小白投资者智能投研驾驶舱",
   description:
-    "FinSight 是面向个人投资者的金融投资研究与辅助决策系统，覆盖 A股/港股/美股/加密全市场，以 AI 研究助手为核心，串联行情、资讯、财务、技术分析、策略回测、观察池与信号提醒。",
+    "FinSight 是面向小白投资者的金融投资研究与辅助决策系统，覆盖 A股/港股/美股/加密全市场，以 AI 研究助手为核心，串联行情、资讯、财务、技术分析、策略回测、观察池与信号提醒。",
 };
 
 export default function RootLayout({

@@ -181,7 +181,7 @@ export default function Home() {
         <div className="mb-6">
           <div className="kicker mb-1.5">Pain Points · Solved</div>
           <h2 className="font-display text-2xl font-bold text-ink">
-            直击个人投资者四大痛点
+            直击小白投资者四大痛点
           </h2>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
