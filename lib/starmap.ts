@@ -338,9 +338,13 @@ export function buildNodeSpecs(data: MarketOverview, hubFilter: MarketFilter = "
     ];
     laidOut.forEach(({ item, pos, anchor }) => {
       const full = item.name?.trim() || item.code?.trim() || item.code;
+      // 加密币种的 name 多为英文全称（Bitcoin/Dogecoin/Shiba Inu…），按 6 字硬切会切在
+      // 单词中间显得残缺；币种代码（BTC/DOGE/SHIB）本身就短且是用户最熟悉的标识，
+      // 加密节点标签直接用代码，全名留给 fullLabel 在 tooltip 里完整展示。
+      const label = market === "CRYPTO" ? shortLabel(item.code?.trim() || full, item.code, 10) : shortLabel(full, item.code, 6);
       nodes.push({
         id: `stk-${item.market}-${item.code}`,
-        label: shortLabel(full, item.code, 6),
+        label,
         fullLabel: full,
         sublabel: fmtPct(item.changePct),
         changePct: item.changePct,
