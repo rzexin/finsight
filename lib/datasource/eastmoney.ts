@@ -293,6 +293,24 @@ interface SearchNewsResp {
 
 const stripTag = (s = "") => s.replace(/<[^>]+>/g, "");
 
+/**
+ * 东财搜索接口对部分主流加密货币的中文俗名做了精确子串过滤（命中即 hitsTotal=0，
+ * 实测"比特币"/"以太币"/"莱特币"/"狗狗币"/"瑞波币"/"柚子币"均被拦截，疑似出于
+ * 虚拟货币监管合规考虑），改用英文代码检索可正常命中，故在查询前做一次替换。
+ */
+const CRYPTO_KEYWORD_ALIAS: [RegExp, string][] = [
+  [/比特币/g, "BTC"],
+  [/以太币/g, "ETH"],
+  [/莱特币/g, "LTC"],
+  [/狗狗币/g, "DOGE"],
+  [/瑞波币/g, "XRP"],
+  [/柚子币/g, "EOS"],
+];
+
+function sanitizeNewsKeyword(keyword: string): string {
+  return CRYPTO_KEYWORD_ALIAS.reduce((k, [re, alias]) => k.replace(re, alias), keyword);
+}
+
 export async function getStockNews(keyword: string, limit = 12): Promise<NewsItem[]> {
   // 个股/主题资讯，新鲜期取 60s；空结果不缓存。
   return swrCache(`stocknews:${keyword}:${limit}`, () => fetchStockNews(keyword, limit), {
@@ -304,7 +322,7 @@ export async function getStockNews(keyword: string, limit = 12): Promise<NewsIte
 async function fetchStockNews(keyword: string, limit = 12): Promise<NewsItem[]> {
   const param = {
     uid: "",
-    keyword,
+    keyword: sanitizeNewsKeyword(keyword),
     type: ["cmsArticleWebOld"],
     client: "web",
     clientType: "web",
