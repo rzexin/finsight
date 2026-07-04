@@ -58,7 +58,7 @@ export function AddSymbol({ onAdd }: { onAdd: (it: Item) => void }) {
         />
       </div>
       {open && items.length > 0 && (
-        <div className="glass animate-rise absolute left-0 right-0 top-[calc(100%+6px)] z-30 max-h-72 overflow-auto rounded-xl p-1.5">
+        <div className="glass-header animate-rise absolute left-0 right-0 top-[calc(100%+6px)] z-30 max-h-72 overflow-auto rounded-xl border border-line p-1.5">
           {items.map((it) => (
             <button
               key={`${it.market}-${it.code}`}

@@ -97,7 +97,7 @@ export default function Home() {
             全市场覆盖 · A股 / 港股 / 美股 / 加密
           </div>
           <h1 className="font-display text-4xl font-extrabold leading-[1.1] tracking-tight text-ink sm:text-5xl">
-            个人投资者的
+            小白投资者的
             <br />
             <span className="text-gradient">智能投研驾驶舱</span>
           </h1>
@@ -121,7 +121,7 @@ export default function Home() {
             {[
               { k: "4", v: "覆盖市场" },
               { k: "7+", v: "AI 调研工具" },
-              { k: "T+0", v: "实时行情" },
+              //   { k: "T+0", v: "实时行情" },
             ].map((s) => (
               <div key={s.v}>
                 <div className="font-display text-2xl font-bold text-gradient">
