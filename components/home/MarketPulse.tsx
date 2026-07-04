@@ -3,8 +3,15 @@
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useFetch } from "@/lib/useFetch";
-import { fmtNum, fmtPct, changeClass } from "@/lib/format";
+import { fmtNum, fmtPct, changeClass, MARKET_CURRENCY } from "@/lib/format";
 import type { MarketOverview, RankItem } from "@/types/finsight";
+
+/** 指数按 region 而非 market 归类（IndexQuote 无 market 字段），映射到对应计价货币符号。 */
+const INDEX_CURRENCY: Record<string, string> = {
+  沪深: "¥",
+  香港: "HK$",
+  美国: "$",
+};
 
 function RankRow({ item, onClick }: { item: RankItem; onClick: () => void }) {
   return (
@@ -17,7 +24,10 @@ function RankRow({ item, onClick }: { item: RankItem; onClick: () => void }) {
         <span className="tnum block text-[10px] text-faint">{item.code}</span>
       </span>
       <span className="shrink-0 text-right">
-        <span className="tnum block text-[12px] font-semibold text-ink">{fmtNum(item.price)}</span>
+        <span className="tnum block text-[12px] font-semibold text-ink">
+          {MARKET_CURRENCY[item.market]}
+          {fmtNum(item.price)}
+        </span>
         <span className={`tnum block text-[11px] font-bold ${changeClass(item.changePct)}`}>
           {fmtPct(item.changePct)}
         </span>
@@ -70,7 +80,10 @@ export function MarketPulse() {
                   >
                     <div className="truncate text-[12px] font-semibold text-ink">{i.name}</div>
                     <div className="mt-0.5 flex items-baseline justify-between gap-1">
-                      <span className="tnum text-[11px] text-muted">{fmtNum(i.price)}</span>
+                      <span className="tnum text-[11px] text-muted">
+                        {INDEX_CURRENCY[i.region] ?? ""}
+                        {fmtNum(i.price)}
+                      </span>
                       <span className={`tnum text-[12px] font-bold ${changeClass(i.changePct)}`}>
                         {fmtPct(i.changePct)}
                       </span>

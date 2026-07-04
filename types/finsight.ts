@@ -104,6 +104,8 @@ export interface RankItem {
   name: string;
   price: number;
   changePct: number;
+  /** 总市值（原始计价货币，非折算美元），仅市值榜等场景填充。 */
+  marketCap?: number;
 }
 
 export interface MarketOverview {
@@ -111,10 +113,22 @@ export interface MarketOverview {
   gainers: RankItem[];
   losers: RankItem[];
   active: RankItem[];
+  /** A股总市值榜（前 N 大市值个股）。 */
+  marketCap?: RankItem[];
   crypto: RankItem[];
   /** 港股/美股个股（涨幅+跌幅榜合并），供星图等按市场展示足量个股；东财个股级涨跌榜只覆盖 A 股，故单列。 */
   hkStocks?: RankItem[];
   usStocks?: RankItem[];
+  /** 港股/美股各自的涨幅榜、跌幅榜、成交活跃榜，供行情看板按市场切换 Tab 展示。 */
+  hkGainers?: RankItem[];
+  hkLosers?: RankItem[];
+  hkActive?: RankItem[];
+  usGainers?: RankItem[];
+  usLosers?: RankItem[];
+  usActive?: RankItem[];
+  /** 港股/美股总市值榜。 */
+  hkMarketCap?: RankItem[];
+  usMarketCap?: RankItem[];
   breadth?: { up: number; down: number; flat: number };
   updatedAt: number;
 }

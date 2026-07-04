@@ -59,6 +59,14 @@ export const MARKET_BADGE: Record<Market, string> = {
   CRYPTO: "bg-warn/10 text-warn",
 };
 
+/** 各市场计价货币符号：A股人民币、港股港元、美股/加密美元。 */
+export const MARKET_CURRENCY: Record<Market, string> = {
+  CN: "¥",
+  HK: "HK$",
+  US: "$",
+  CRYPTO: "$",
+};
+
 export function timeAgo(ts: number): string {
   const diff = Date.now() - ts;
   const m = Math.floor(diff / 60000);

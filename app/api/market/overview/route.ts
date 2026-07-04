@@ -13,6 +13,11 @@ const FRESH_MS = 15_000;
 
 const CACHE_KEY = "market:overview";
 
+// 港股/美股涨跌幅榜里低价「仙股」/权证占比很高，过滤后经常只剩个别条目——
+// 因此原始抓取量要显著大于展示所需的条数，过滤后再截断到 DISPLAY_LIMIT。
+const DISPLAY_LIMIT = 12;
+const FETCH_LIMIT = 60;
+
 /**
  * 港股/美股涨跌幅榜天然被权证、认股权证、极低价「仙股」占据（这些标的没有涨跌停限制，
  * 单日 50%+ 波动很常见但对普通用户毫无展示价值），过滤掉以提升榜单可读性。
@@ -38,19 +43,49 @@ function mergeUnique(...lists: RankItem[][]): RankItem[] {
   return out;
 }
 
+/** 单个榜单（如成交活跃）过滤仙股/权证噪音，不做去重，并截断到展示所需的条数。 */
+function filterJunk(list: RankItem[], limit: number): RankItem[] {
+  const out: RankItem[] = [];
+  for (const item of list) {
+    if (!item.code || isJunkMover(item)) continue;
+    out.push(item);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
 async function buildOverview(): Promise<MarketOverview> {
-  const [indices, gainers, losers, active, cryptoR, hkGainers, hkLosers, usGainers, usLosers] =
-    await Promise.allSettled([
-      getIndices(),
-      getRankList("gainers", 10),
-      getRankList("losers", 10),
-      getRankList("active", 10),
-      getCryptoOverview(10),
-      getRankList("gainers", 12, "HK"),
-      getRankList("losers", 12, "HK"),
-      getRankList("gainers", 12, "US"),
-      getRankList("losers", 12, "US"),
-    ]);
+  const [
+    indices,
+    gainers,
+    losers,
+    active,
+    marketCap,
+    cryptoR,
+    hkGainers,
+    hkLosers,
+    hkActive,
+    hkMarketCap,
+    usGainers,
+    usLosers,
+    usActive,
+    usMarketCap,
+  ] = await Promise.allSettled([
+    getIndices(),
+    getRankList("gainers", 10),
+    getRankList("losers", 10),
+    getRankList("active", 10),
+    getRankList("marketCap", 10),
+    getCryptoOverview(10),
+    getRankList("gainers", FETCH_LIMIT, "HK"),
+    getRankList("losers", FETCH_LIMIT, "HK"),
+    getRankList("active", FETCH_LIMIT, "HK"),
+    getRankList("marketCap", DISPLAY_LIMIT, "HK"),
+    getRankList("gainers", FETCH_LIMIT, "US"),
+    getRankList("losers", FETCH_LIMIT, "US"),
+    getRankList("active", FETCH_LIMIT, "US"),
+    getRankList("marketCap", DISPLAY_LIMIT, "US"),
+  ]);
 
   const settled = <T,>(r: PromiseSettledResult<T[]>): T[] => (r.status === "fulfilled" ? r.value : []);
 
@@ -62,14 +97,28 @@ async function buildOverview(): Promise<MarketOverview> {
   const preferFresh = <T,>(fresh: T[], stale: T[] | undefined): T[] =>
     fresh.length > 0 ? fresh : (stale ?? []);
 
+  const hkGainersR = filterJunk(settled(hkGainers), DISPLAY_LIMIT);
+  const hkLosersR = filterJunk(settled(hkLosers), DISPLAY_LIMIT);
+  const usGainersR = filterJunk(settled(usGainers), DISPLAY_LIMIT);
+  const usLosersR = filterJunk(settled(usLosers), DISPLAY_LIMIT);
+
   const overview: MarketOverview = {
     indices: preferFresh(settled(indices), prev?.indices),
     gainers: preferFresh(settled(gainers), prev?.gainers),
     losers: preferFresh(settled(losers), prev?.losers),
     active: preferFresh(settled(active), prev?.active),
+    marketCap: preferFresh(settled(marketCap), prev?.marketCap),
     crypto: preferFresh(settled(cryptoR), prev?.crypto),
-    hkStocks: preferFresh(mergeUnique(settled(hkGainers), settled(hkLosers)), prev?.hkStocks),
-    usStocks: preferFresh(mergeUnique(settled(usGainers), settled(usLosers)), prev?.usStocks),
+    hkStocks: preferFresh(mergeUnique(hkGainersR, hkLosersR), prev?.hkStocks),
+    usStocks: preferFresh(mergeUnique(usGainersR, usLosersR), prev?.usStocks),
+    hkGainers: preferFresh(hkGainersR, prev?.hkGainers),
+    hkLosers: preferFresh(hkLosersR, prev?.hkLosers),
+    hkActive: preferFresh(filterJunk(settled(hkActive), DISPLAY_LIMIT), prev?.hkActive),
+    hkMarketCap: preferFresh(settled(hkMarketCap), prev?.hkMarketCap),
+    usGainers: preferFresh(usGainersR, prev?.usGainers),
+    usLosers: preferFresh(usLosersR, prev?.usLosers),
+    usActive: preferFresh(filterJunk(settled(usActive), DISPLAY_LIMIT), prev?.usActive),
+    usMarketCap: preferFresh(settled(usMarketCap), prev?.usMarketCap),
     updatedAt: Date.now(),
   };
 

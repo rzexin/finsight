@@ -178,6 +178,7 @@ interface ClistRow {
   f12?: string;
   f13?: number;
   f14?: string;
+  f20?: number;
 }
 
 function normDiff(diff: ClistRow[] | Record<string, ClistRow> | undefined): ClistRow[] {
@@ -185,17 +186,26 @@ function normDiff(diff: ClistRow[] | Record<string, ClistRow> | undefined): Clis
   return Array.isArray(diff) ? diff : Object.values(diff);
 }
 
+// 排序字段：涨跌幅 f3，成交额 f6，总市值 f20（东财 clist/get 通用字段）。
+const FID_BY_KIND: Record<"gainers" | "losers" | "active" | "marketCap", string> = {
+  gainers: "f3",
+  losers: "f3",
+  active: "f6",
+  marketCap: "f20",
+};
+
 export async function getRankList(
-  kind: "gainers" | "losers" | "active",
+  kind: "gainers" | "losers" | "active" | "marketCap",
   pz = 10,
   market: "CN" | "HK" | "US" = "CN"
 ): Promise<RankItem[]> {
-  const fid = kind === "active" ? "f6" : "f3";
+  const fid = FID_BY_KIND[kind];
   const po = kind === "losers" ? 0 : 1;
   const data = await fetchJsonAny<{ data?: { diff?: ClistRow[] | Record<string, ClistRow> } }>(
     (host) =>
       `${host}/api/qt/clist/get?pn=1&pz=${pz}&po=${po}&fid=${fid}` +
-      `&fs=${encodeURIComponent(FS_BY_MARKET[market])}&fields=f2,f3,f12,f13,f14&fltt=2`,
+      // f20 = 总市值，涨跌幅/成交活跃榜也一并带出，供列表 hover 或后续展示复用，成本几乎为零。
+      `&fs=${encodeURIComponent(FS_BY_MARKET[market])}&fields=f2,f3,f12,f13,f14,f20&fltt=2`,
     emHostCandidates(),
     { headers: EM_HEADERS, retries: 1 }
   );
@@ -205,6 +215,7 @@ export async function getRankList(
     name: r.f14 ?? "",
     price: num(r.f2),
     changePct: num(r.f3),
+    marketCap: r.f20 != null ? num(r.f20) : undefined,
   }));
 }
 

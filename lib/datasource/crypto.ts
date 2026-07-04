@@ -290,6 +290,7 @@ interface CgMarket {
   name: string;
   current_price: number;
   price_change_percentage_24h: number;
+  market_cap: number;
 }
 
 interface CgQuoteMarket {
@@ -335,6 +336,7 @@ async function getCryptoOverviewFromCoinGecko(
       name: c.name,
       price: num(c.current_price),
       changePct: num(c.price_change_percentage_24h),
+      marketCap: num(c.market_cap),
     }))
     .filter((c) => !STABLECOINS.has(c.code))
     .slice(0, limit);
