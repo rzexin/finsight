@@ -3,7 +3,13 @@
 import type { ReactNode } from "react";
 import { IconBolt } from "@/components/ui/icons";
 
-export function LoadingPanel({ rows = 3, label }: { rows?: number; label?: string }) {
+export function LoadingPanel({
+  rows = 3,
+  label,
+}: {
+  rows?: number;
+  label?: string;
+}) {
   return (
     <div className="space-y-3 p-1" role="status" aria-live="polite">
       {label && <p className="text-xs text-faint">{label}</p>}
@@ -31,9 +37,6 @@ export function ErrorPanel({
       <div>
         <p className="font-semibold text-ink">{message}</p>
         {detail && <p className="mt-1 text-sm text-muted">{detail}</p>}
-        <p className="mt-1 text-xs text-faint">
-          系统坚持使用真实接口数据，不会以模拟数据填充。
-        </p>
       </div>
       {onRetry && (
         <button className="btn-ghost text-sm" onClick={onRetry}>

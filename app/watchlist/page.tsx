@@ -3,14 +3,35 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { GlassCard, SectionTitle } from "@/components/ui/GlassCard";
-import { LoadingPanel, ErrorPanel, EmptyPanel } from "@/components/ui/StateView";
+import {
+  LoadingPanel,
+  ErrorPanel,
+  EmptyPanel,
+} from "@/components/ui/StateView";
 import { AddSymbol } from "@/components/watchlist/AddSymbol";
 import { useFetch } from "@/lib/useFetch";
-import { getWatchlist, addWatch, removeWatch, getSignalConfig, saveSignalConfig, type WatchItem } from "@/lib/storage";
-import { DEFAULT_SIGNAL_CONFIG, type Signal, type SignalConfig, type SignalLevel } from "@/lib/signals";
+import {
+  getWatchlist,
+  addWatch,
+  removeWatch,
+  getSignalConfig,
+  saveSignalConfig,
+  type WatchItem,
+} from "@/lib/storage";
+import {
+  DEFAULT_SIGNAL_CONFIG,
+  type Signal,
+  type SignalConfig,
+  type SignalLevel,
+} from "@/lib/signals";
 import { fmtNum, fmtPct, changeClass, MARKET_BADGE } from "@/lib/format";
 import { MARKET_LABEL, type Quote } from "@/types/finsight";
-import { IconSpark, IconClose, IconBolt, IconArrow } from "@/components/ui/icons";
+import {
+  IconSpark,
+  IconClose,
+  IconBolt,
+  IconArrow,
+} from "@/components/ui/icons";
 
 const LEVEL_STYLE: Record<SignalLevel, string> = {
   bullish: "border-up/30 bg-up/5 text-up",
@@ -19,9 +40,21 @@ const LEVEL_STYLE: Record<SignalLevel, string> = {
   info: "border-primary/30 bg-primary/5 text-primary",
 };
 
-const CFG_FIELDS: { key: keyof SignalConfig; label: string; min: number; max: number; step: number }[] = [
+const CFG_FIELDS: {
+  key: keyof SignalConfig;
+  label: string;
+  min: number;
+  max: number;
+  step: number;
+}[] = [
   { key: "changePct", label: "异动涨跌幅阈值 (%)", min: 1, max: 20, step: 0.5 },
-  { key: "breakoutWindow", label: "突破/回撤窗口 (日)", min: 5, max: 60, step: 1 },
+  {
+    key: "breakoutWindow",
+    label: "突破/回撤窗口 (日)",
+    min: 5,
+    max: 60,
+    step: 1,
+  },
   { key: "volMultiple", label: "放量倍数", min: 1.2, max: 5, step: 0.1 },
   { key: "drawdownPct", label: "回撤预警 (%)", min: 5, max: 40, step: 1 },
 ];
@@ -41,7 +74,7 @@ export default function WatchlistPage() {
   const symbolsParam = watch.map((w) => `${w.market}:${w.code}`).join(",");
   const quoteRes = useFetch<{ quotes: Quote[] }>(
     watch.length ? `/api/quote?symbols=${symbolsParam}` : null,
-    { pollMs: 15000 }
+    { pollMs: 15000 },
   );
   const quoteMap = useMemo(() => {
     const m = new Map<string, Quote>();
@@ -49,8 +82,13 @@ export default function WatchlistPage() {
     return m;
   }, [quoteRes.data]);
 
-  const add = (it: { market: WatchItem["market"]; code: string; name: string }) => setWatch(addWatch(it));
-  const remove = (m: WatchItem["market"], c: string) => setWatch(removeWatch(m, c));
+  const add = (it: {
+    market: WatchItem["market"];
+    code: string;
+    name: string;
+  }) => setWatch(addWatch(it));
+  const remove = (m: WatchItem["market"], c: string) =>
+    setWatch(removeWatch(m, c));
 
   const updateCfg = (key: keyof SignalConfig, value: number) => {
     const next = { ...config, [key]: value };
@@ -66,7 +104,14 @@ export default function WatchlistPage() {
     const res = await fetch("/api/signals/evaluate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: watch.map((w) => ({ market: w.market, code: w.code, name: w.name })), config }),
+      body: JSON.stringify({
+        items: watch.map((w) => ({
+          market: w.market,
+          code: w.code,
+          name: w.name,
+        })),
+        config,
+      }),
     }).catch(() => null);
     setEvaluating(false);
     if (!res || !res.ok) {
@@ -77,9 +122,10 @@ export default function WatchlistPage() {
     setSignals(data.signals ?? []);
   };
 
-  const aiPrompt = signals && signals.length
-    ? `我的观察池触发了以下信号：${signals.map((s) => `${s.name ?? s.code}「${s.title}」`).join("；")}。请解读这些信号的含义、可能的市场逻辑与应对思路。`
-    : "";
+  const aiPrompt =
+    signals && signals.length
+      ? `我的观察池触发了以下信号：${signals.map((s) => `${s.name ?? s.code}「${s.title}」`).join("；")}。请解读这些信号的含义、可能的市场逻辑与应对思路。`
+      : "";
 
   return (
     <div className="animate-rise space-y-6">
@@ -95,29 +141,54 @@ export default function WatchlistPage() {
         {/* 观察池表格 */}
         <GlassCard className="p-5">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="font-display text-sm font-bold text-ink">我的观察池</h3>
-            <span className="text-[11px] text-faint">{watch.length} 个标的 · 15s 刷新</span>
+            <h3 className="font-display text-sm font-bold text-ink">
+              我的观察池
+            </h3>
+            <span className="text-[11px] text-faint">
+              {watch.length} 个标的 · 15s 刷新
+            </span>
           </div>
           {watch.length === 0 ? (
-            <EmptyPanel title="观察池为空" desc="使用上方搜索框添加你关注的股票或加密货币" />
+            <EmptyPanel
+              title="观察池为空"
+              desc="使用上方搜索框添加你关注的股票或加密货币"
+            />
           ) : (
             <div className="space-y-0.5">
               {watch.map((w) => {
                 const q = quoteMap.get(`${w.market}:${w.code}`);
                 return (
-                  <div key={`${w.market}-${w.code}`} className="flex items-center gap-3 rounded-xl px-2 py-2.5 transition hover:bg-primary/5">
-                    <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${MARKET_BADGE[w.market]}`}>
+                  <div
+                    key={`${w.market}-${w.code}`}
+                    className="flex items-center gap-3 rounded-xl px-2 py-2.5 transition hover:bg-primary/5"
+                  >
+                    <span
+                      className={`rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${MARKET_BADGE[w.market]}`}
+                    >
                       {MARKET_LABEL[w.market]}
                     </span>
-                    <Link href={`/stock/${w.market}/${w.code}`} className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-ink hover:text-primary">{w.name}</p>
+                    <Link
+                      href={`/stock/${w.market}/${w.code}`}
+                      className="min-w-0 flex-1"
+                    >
+                      <p className="truncate text-sm font-semibold text-ink hover:text-primary">
+                        {w.name}
+                      </p>
                       <p className="tnum text-[11px] text-faint">{w.code}</p>
                     </Link>
-                    <span className="tnum text-sm font-semibold text-ink">{q ? fmtNum(q.price) : "--"}</span>
-                    <span className={`tnum w-16 text-right text-sm font-bold ${changeClass(q?.changePct)}`}>
+                    <span className="tnum text-sm font-semibold text-ink">
+                      {q ? fmtNum(q.price) : "--"}
+                    </span>
+                    <span
+                      className={`tnum w-16 text-right text-sm font-bold ${changeClass(q?.changePct)}`}
+                    >
                       {q ? fmtPct(q.changePct) : "--"}
                     </span>
-                    <button onClick={() => remove(w.market, w.code)} className="text-faint hover:text-up cursor-pointer" aria-label="移除">
+                    <button
+                      onClick={() => remove(w.market, w.code)}
+                      className="text-faint hover:text-up cursor-pointer"
+                      aria-label="移除"
+                    >
                       <IconClose width={15} height={15} />
                     </button>
                   </div>
@@ -125,18 +196,24 @@ export default function WatchlistPage() {
               })}
             </div>
           )}
-          {quoteRes.error && <p className="mt-2 text-xs text-up">{quoteRes.error}</p>}
+          {quoteRes.error && (
+            <p className="mt-2 text-xs text-up">{quoteRes.error}</p>
+          )}
         </GlassCard>
 
         {/* 信号配置 */}
         <GlassCard className="p-5">
-          <h3 className="mb-3 font-display text-sm font-bold text-ink">信号规则</h3>
+          <h3 className="mb-3 font-display text-sm font-bold text-ink">
+            信号规则
+          </h3>
           <div className="space-y-4">
             {CFG_FIELDS.map((f) => (
               <div key={f.key}>
                 <div className="mb-1 flex items-center justify-between text-xs">
                   <span className="text-muted">{f.label}</span>
-                  <span className="tnum font-semibold text-primary">{config[f.key]}</span>
+                  <span className="tnum font-semibold text-primary">
+                    {config[f.key]}
+                  </span>
                 </div>
                 <input
                   type="range"
@@ -149,9 +226,22 @@ export default function WatchlistPage() {
                 />
               </div>
             ))}
-            <p className="text-[11px] text-faint">同时评估：均线金叉/死叉、RSI 超买超卖（默认 {config.rsiHigh}/{config.rsiLow}）。</p>
-            <button onClick={evaluate} disabled={evaluating || watch.length === 0} className="btn-neon w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed">
-              {evaluating ? <span className="animate-spin-slow"><IconBolt width={16} height={16} /></span> : <IconBolt width={16} height={16} />}
+            <p className="text-[11px] text-faint">
+              同时评估：均线金叉/死叉、RSI 超买超卖（默认 {config.rsiHigh}/
+              {config.rsiLow}）。
+            </p>
+            <button
+              onClick={evaluate}
+              disabled={evaluating || watch.length === 0}
+              className="btn-neon w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {evaluating ? (
+                <span className="animate-spin-slow">
+                  <IconBolt width={16} height={16} />
+                </span>
+              ) : (
+                <IconBolt width={16} height={16} />
+              )}
               {evaluating ? "评估中…" : "评估信号"}
             </button>
           </div>
@@ -162,17 +252,27 @@ export default function WatchlistPage() {
       {(evaluating || signals || evalErr) && (
         <GlassCard className="p-5">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="font-display text-sm font-bold text-ink">触发的信号</h3>
+            <h3 className="font-display text-sm font-bold text-ink">
+              触发的信号
+            </h3>
             {signals && signals.length > 0 && (
-              <Link href={`/assistant?q=${encodeURIComponent(aiPrompt)}`} className="btn-ghost text-xs">
-                <IconSpark width={14} height={14} /> AI 解读这些信号 <IconArrow width={13} height={13} />
+              <Link
+                href={`/assistant?q=${encodeURIComponent(aiPrompt)}`}
+                className="btn-ghost text-xs"
+              >
+                <IconSpark width={14} height={14} /> AI 解读这些信号{" "}
+                <IconArrow width={13} height={13} />
               </Link>
             )}
           </div>
-          {evaluating && <LoadingPanel rows={3} label="正在基于真实历史数据评估…" />}
+          {evaluating && (
+            <LoadingPanel rows={3} label="正在基于历史数据评估…" />
+          )}
           {evalErr && <ErrorPanel detail={evalErr} onRetry={evaluate} />}
           {signals && signals.length === 0 && !evaluating && (
-            <p className="px-2 py-6 text-center text-sm text-muted">当前观察池未触发任何信号</p>
+            <p className="px-2 py-6 text-center text-sm text-muted">
+              当前观察池未触发任何信号
+            </p>
           )}
           {signals && signals.length > 0 && (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -183,7 +283,9 @@ export default function WatchlistPage() {
                   className={`rounded-xl border px-4 py-3 transition hover:-translate-y-0.5 ${LEVEL_STYLE[s.level]}`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold">{s.name ?? s.code}</span>
+                    <span className="text-sm font-bold">
+                      {s.name ?? s.code}
+                    </span>
                     <span className="text-[10px] opacity-70">{s.code}</span>
                   </div>
                   <p className="mt-1 text-sm font-semibold">{s.title}</p>

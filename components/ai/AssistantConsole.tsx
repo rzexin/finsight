@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Markdown } from "@/components/ai/Markdown";
 import { EvidencePanel, type EvidenceItem } from "@/components/ai/EvidencePanel";
+import { TermExplainPopover } from "@/components/ai/TermExplainPopover";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { IconSpark, IconArrow, IconBolt, IconDownload, IconCopy, IconCheck, IconClose } from "@/components/ui/icons";
 
@@ -582,6 +583,9 @@ export function AssistantConsole() {
           />
         )}
       </GlassCard>
+
+      {/* 研报划词解释：在报告正文里选中不熟悉的词汇，即可弹出 AI 通俗解释 */}
+      <TermExplainPopover targetRef={reportContentRef} />
     </div>
   );
 }

@@ -413,6 +413,59 @@ body {
   animation: fs-sweep 1.4s infinite;
 }
 
+/* ---------- Term Explain Popover (研报划词解释 · 科技感 HUD) ---------- */
+.term-explain-trigger {
+  animation: fs-rise 0.16s ease both;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.term-explain-trigger:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px -10px var(--glow-primary);
+}
+
+.term-explain-card {
+  border-radius: 14px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(243, 247, 253, 0.92));
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid rgba(0, 102, 255, 0.28);
+  box-shadow:
+    0 0 0 1px rgba(0, 214, 224, 0.12),
+    0 22px 48px -20px rgba(11, 27, 58, 0.45),
+    0 0 30px -6px var(--glow-primary);
+  animation: fs-rise 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.term-explain-scanline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--cyan), var(--primary), transparent);
+  opacity: 0.85;
+  animation: fs-scan 2.6s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes fs-scan {
+  0%, 100% { top: 0; opacity: 0.9; }
+  50% { top: calc(100% - 2px); opacity: 0.35; }
+}
+
+.term-explain-corner {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--primary);
+  opacity: 0.7;
+  pointer-events: none;
+}
+.term-explain-corner-tl { top: -1px; left: -1px; border-right: none; border-bottom: none; border-radius: 4px 0 0 0; }
+.term-explain-corner-tr { top: -1px; right: -1px; border-left: none; border-bottom: none; border-radius: 0 4px 0 0; }
+.term-explain-corner-bl { bottom: -1px; left: -1px; border-right: none; border-top: none; border-radius: 0 0 0 4px; }
+.term-explain-corner-br { bottom: -1px; right: -1px; border-left: none; border-top: none; border-radius: 0 0 4px 0; }
+
 /* ---------- Scrollbar ---------- */
 ::-webkit-scrollbar {
   width: 10px;
