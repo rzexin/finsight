@@ -163,14 +163,41 @@ export function AssistantConsole() {
       setInput("");
       setRunning(true);
 
+      // 兜底防护：无论卡在后端调研的哪个环节（等待大模型响应、等待工具返回…），
+      // 只要连续这么久收不到服务端任何一条新事件，就判定为异常卡死并主动断开——
+      // 避免出现「一直转圈、永远等不到结果」的死等状态（这是比崩溃更隐蔽的故障：
+      // 页面看似正常，但请求本身已经悬挂，用户只能刷新页面）。
+      const IDLE_TIMEOUT_MS = 40_000;
+      const abortCtrl = new AbortController();
+      let idleTimer: ReturnType<typeof setTimeout> | null = null;
+      let timedOut = false;
+      const armIdle = () => {
+        if (idleTimer) clearTimeout(idleTimer);
+        idleTimer = setTimeout(() => {
+          timedOut = true;
+          abortCtrl.abort();
+        }, IDLE_TIMEOUT_MS);
+      };
+      const clearIdle = () => {
+        if (idleTimer) clearTimeout(idleTimer);
+        idleTimer = null;
+      };
+
+      armIdle();
       const res = await fetch("/api/assistant", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: history, context }),
+        signal: abortCtrl.signal,
       }).catch(() => null);
 
       if (!res || !res.ok || !res.body) {
-        setError("无法连接 AI 服务，请检查 .env.local 中的大模型配置");
+        clearIdle();
+        setError(
+          timedOut
+            ? "请求超时，AI 服务长时间无响应，请重试或稍后再试"
+            : "无法连接 AI 服务，请检查 .env.local 中的大模型配置"
+        );
         setRunning(false);
         return;
       }
@@ -178,6 +205,10 @@ export function AssistantConsole() {
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buf = "";
+      // 兜底防护：即便后端/大模型异常「停不下来」，前端也不会被无限增长的文本
+      // 拖到内存爆掉——单份研报超过此长度直接截断并结束本次生成
+      const MAX_REPORT_CHARS = 120_000;
+      let truncated = false;
       const handle = (ev: Record<string, unknown>) => {
         switch (ev.type) {
           case "status":
@@ -223,6 +254,10 @@ export function AssistantConsole() {
             break;
           }
           case "token":
+            if (reportRef.current.length >= MAX_REPORT_CHARS) {
+              truncated = true;
+              break;
+            }
             reportRef.current += String(ev.text);
             scheduleReportFlush();
             break;
@@ -234,8 +269,18 @@ export function AssistantConsole() {
 
       // eslint-disable-next-line no-constant-condition
       while (true) {
-        const { done, value } = await reader.read();
+        let done: boolean, value: Uint8Array | undefined;
+        try {
+          const chunk = await reader.read();
+          done = chunk.done;
+          value = chunk.value;
+        } catch {
+          // abort（超时或用户离开）或网络中断，均结束读取循环
+          break;
+        }
         if (done) break;
+        // 收到任意数据即说明连接仍然存活，重新计时
+        armIdle();
         buf += decoder.decode(value, { stream: true });
         const parts = buf.split("\n\n");
         buf = parts.pop() ?? "";
@@ -249,11 +294,27 @@ export function AssistantConsole() {
           } catch {
             /* ignore */
           }
+          if (truncated) break;
+        }
+        if (truncated) {
+          reader.cancel().catch(() => {});
+          break;
         }
       }
+      clearIdle();
 
       // 收尾：确保最后一批还未提交的增量（不足一帧）也被渲染出来，
       // 否则 report 状态可能落后于 reportRef.current 最终值几个字符
+      if (truncated) {
+        reportRef.current += "\n\n> ⚠️ 内容长度超出限制，已自动截断，请尝试缩小提问范围。";
+      } else if (timedOut) {
+        reportRef.current += reportRef.current.trim()
+          ? "\n\n> ⚠️ 响应超时，AI 服务长时间无新内容，已自动中断。以上为已生成的部分内容。"
+          : "";
+        if (!reportRef.current.trim()) {
+          setError("请求超时，AI 服务长时间无响应，请重试或稍后再试");
+        }
+      }
       flushReportNow();
       setRunning(false);
       if (reportRef.current.trim()) {

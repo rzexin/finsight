@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, type ReactNode } from "react";
+import { Fragment, useRef, type ReactNode } from "react";
 
 // 较完备且安全的 Markdown 渲染（不使用 dangerouslySetInnerHTML）
 // 支持：标题 / 粗体·斜体·删除线 / 行内代码 / 代码块 / 链接 /
@@ -155,11 +155,35 @@ export function Markdown({
   content: string;
   onEvidenceClick?: EvidenceClickHandler;
 }) {
+  // 流式生成时 content 会以「只追加」的方式频繁变化（每帧甚至每 token 一次），
+  // 若每次都从头完整重新解析 + 重新构建所有区块的 React 节点，成本随内容长度
+  // 线性增长、随渲染次数叠加，长对话/长研报下会变成 O(n²) 级别的 CPU 与内存
+  // 分配，最终导致标签页卡死甚至崩溃。
+  // 这里按「区块」缓存已生成的节点：只要该区块对应的原始文本没有变化（即已经
+  // 写完、不会再变），直接复用上次渲染出的节点，避免重复解析与重复创建元素；
+  // 只有仍在增长中的最后一个区块才需要重新计算。
+  // 当 content 不再是上次内容的前缀（切换到另一份研报/清空重来）时清空缓存，
+  // 防止缓存随整场会话无限增长。
+  const cacheRef = useRef<{ prevContent: string; blocks: Map<string, ReactNode>; seq: number }>({
+    prevContent: "",
+    blocks: new Map(),
+    seq: 0,
+  });
+  if (!content.startsWith(cacheRef.current.prevContent)) {
+    cacheRef.current.blocks = new Map();
+    cacheRef.current.seq = 0;
+  }
+  cacheRef.current.prevContent = content;
+  const cache = cacheRef.current.blocks;
+  const nk = () => `b-${cacheRef.current.seq++}`;
+
   const lines = content.replace(/\r\n/g, "\n").split("\n");
   const blocks: ReactNode[] = [];
   let i = 0;
-  let key = 0;
-  const nk = () => `b-${key++}`;
+
+  // 取出 [blockStart, i) 范围内的原始行，作为该区块的缓存键：
+  // 只要这段原始文本不变，渲染结果必然不变，可安全复用
+  const rawKey = (blockStart: number) => lines.slice(blockStart, i).join("\n");
 
   while (i < lines.length) {
     const raw = lines[i];
@@ -172,6 +196,8 @@ export function Markdown({
       continue;
     }
 
+    const blockStart = i;
+
     // 代码块 ```lang
     const fence = /^```(.*)$/.exec(trimmed);
     if (fence) {
@@ -182,14 +208,20 @@ export function Markdown({
         i++;
       }
       i++; // 跳过结束 ```
-      blocks.push(
-        <pre
-          key={nk()}
-          className="my-3 overflow-x-auto rounded-xl border border-line bg-surface-2/70 p-3 text-xs leading-relaxed"
-        >
-          <code className="tnum text-ink-2">{code.join("\n")}</code>
-        </pre>
-      );
+      const cacheKey = rawKey(blockStart);
+      let node = cache.get(cacheKey);
+      if (!node) {
+        node = (
+          <pre
+            key={nk()}
+            className="my-3 overflow-x-auto rounded-xl border border-line bg-surface-2/70 p-3 text-xs leading-relaxed"
+          >
+            <code className="tnum text-ink-2">{code.join("\n")}</code>
+          </pre>
+        );
+        cache.set(cacheKey, node);
+      }
+      blocks.push(node);
       continue;
     }
 
@@ -203,67 +235,86 @@ export function Markdown({
         rows.push(splitRow(lines[i]));
         i++;
       }
-      const colCls = (c: number) => alignCls[aligns[c] ?? "left"];
-      blocks.push(
-        <div key={nk()} className="my-3 overflow-x-auto rounded-xl border border-line">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="bg-surface-2/70">
-                {header.map((h, c) => (
-                  <th
-                    key={c}
-                    className={`border-b border-line px-3 py-2 font-semibold text-ink ${colCls(c)}`}
-                  >
-                    {renderInline(h, `th-${key}-${c}`, onEvidenceClick)}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r, ri) => (
-                <tr key={ri} className="even:bg-surface-2/30">
-                  {header.map((_, c) => (
-                    <td
+      const cacheKey = rawKey(blockStart);
+      let node = cache.get(cacheKey);
+      if (!node) {
+        const colCls = (c: number) => alignCls[aligns[c] ?? "left"];
+        const k = nk();
+        node = (
+          <div key={k} className="my-3 overflow-x-auto rounded-xl border border-line">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="bg-surface-2/70">
+                  {header.map((h, c) => (
+                    <th
                       key={c}
-                      className={`border-b border-line/60 px-3 py-2 text-ink-2 ${colCls(c)}`}
+                      className={`border-b border-line px-3 py-2 font-semibold text-ink ${colCls(c)}`}
                     >
-                      {renderInline(r[c] ?? "", `td-${key}-${ri}-${c}`, onEvidenceClick)}
-                    </td>
+                      {renderInline(h, `th-${k}-${c}`, onEvidenceClick)}
+                    </th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      );
+              </thead>
+              <tbody>
+                {rows.map((r, ri) => (
+                  <tr key={ri} className="even:bg-surface-2/30">
+                    {header.map((_, c) => (
+                      <td
+                        key={c}
+                        className={`border-b border-line/60 px-3 py-2 text-ink-2 ${colCls(c)}`}
+                      >
+                        {renderInline(r[c] ?? "", `td-${k}-${ri}-${c}`, onEvidenceClick)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+        cache.set(cacheKey, node);
+      }
+      blocks.push(node);
       continue;
     }
 
     // 分隔线
     if (/^(-{3,}|\*{3,}|_{3,})$/.test(trimmed)) {
-      blocks.push(<hr key={nk()} className="my-4 border-line" />);
       i++;
+      const cacheKey = rawKey(blockStart);
+      let node = cache.get(cacheKey);
+      if (!node) {
+        node = <hr key={nk()} className="my-4 border-line" />;
+        cache.set(cacheKey, node);
+      }
+      blocks.push(node);
       continue;
     }
 
     // 标题
     const h = /^(#{1,6})\s+(.*)$/.exec(trimmed);
     if (h) {
-      const level = h[1].length;
-      const cls =
-        level <= 2
-          ? "font-display mt-5 mb-2 text-lg font-bold text-ink flex items-center gap-2"
-          : "mt-4 mb-1.5 text-base font-semibold text-ink";
-      const k = nk();
-      blocks.push(
-        <div key={k} className={cls}>
-          {level <= 2 && (
-            <span className="h-3.5 w-1 shrink-0 rounded-full bg-gradient-to-b from-primary to-cyan" />
-          )}
-          <span>{renderInline(h[2], k, onEvidenceClick)}</span>
-        </div>
-      );
       i++;
+      const cacheKey = rawKey(blockStart);
+      let node = cache.get(cacheKey);
+      if (!node) {
+        const level = h[1].length;
+        const cls =
+          level <= 2
+            ? "font-display mt-5 mb-2 text-lg font-bold text-ink flex items-center gap-2"
+            : "mt-4 mb-1.5 text-base font-semibold text-ink";
+        const k = nk();
+        node = (
+          <div key={k} className={cls}>
+            {level <= 2 && (
+              <span className="h-3.5 w-1 shrink-0 rounded-full bg-gradient-to-b from-primary to-cyan" />
+            )}
+            <span>{renderInline(h[2], k, onEvidenceClick)}</span>
+          </div>
+        );
+        cache.set(cacheKey, node);
+      }
+      blocks.push(node);
       continue;
     }
 
@@ -274,15 +325,21 @@ export function Markdown({
         quote.push(lines[i].trim().replace(/^>\s?/, ""));
         i++;
       }
-      const k = nk();
-      blocks.push(
-        <blockquote
-          key={k}
-          className="my-3 rounded-r-lg border-l-2 border-primary/50 bg-primary/5 px-3 py-2 text-xs text-muted"
-        >
-          {renderInline(quote.join(" "), k, onEvidenceClick)}
-        </blockquote>
-      );
+      const cacheKey = rawKey(blockStart);
+      let node = cache.get(cacheKey);
+      if (!node) {
+        const k = nk();
+        node = (
+          <blockquote
+            key={k}
+            className="my-3 rounded-r-lg border-l-2 border-primary/50 bg-primary/5 px-3 py-2 text-xs text-muted"
+          >
+            {renderInline(quote.join(" "), k, onEvidenceClick)}
+          </blockquote>
+        );
+        cache.set(cacheKey, node);
+      }
+      blocks.push(node);
       continue;
     }
 
@@ -301,7 +358,14 @@ export function Markdown({
         });
         i++;
       }
-      blocks.push(<Fragment key={nk()}>{renderList(items, 0, `ls-${key}`, onEvidenceClick)}</Fragment>);
+      const cacheKey = rawKey(blockStart);
+      let node = cache.get(cacheKey);
+      if (!node) {
+        const k = nk();
+        node = <Fragment key={k}>{renderList(items, 0, `ls-${k}`, onEvidenceClick)}</Fragment>;
+        cache.set(cacheKey, node);
+      }
+      blocks.push(node);
       continue;
     }
 
@@ -320,12 +384,18 @@ export function Markdown({
       para.push(lines[i].trim());
       i++;
     }
-    const k = nk();
-    blocks.push(
-      <p key={k} className="my-2 text-sm leading-relaxed text-ink-2">
-        {renderInline(para.join(" "), k, onEvidenceClick)}
-      </p>
-    );
+    const cacheKey = rawKey(blockStart);
+    let node = cache.get(cacheKey);
+    if (!node) {
+      const k = nk();
+      node = (
+        <p key={k} className="my-2 text-sm leading-relaxed text-ink-2">
+          {renderInline(para.join(" "), k, onEvidenceClick)}
+        </p>
+      );
+      cache.set(cacheKey, node);
+    }
+    blocks.push(node);
   }
 
   return <div className="fs-markdown">{blocks}</div>;
