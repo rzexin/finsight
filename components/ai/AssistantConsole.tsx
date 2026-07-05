@@ -119,6 +119,32 @@ export function AssistantConsole() {
   const reportEndRef = useRef<HTMLDivElement>(null);
   const reportContentRef = useRef<HTMLDivElement>(null);
   const startedRef = useRef(false);
+  // 流式 token 到达频率可能远超屏幕刷新率：逐 token setState 会让 Markdown
+  // 全量重新解析成百上千次（O(n²) 主线程开销），长研报下容易卡死甚至让标签页崩溃。
+  // 这里用 rAF 把同一帧内的多次追加合并成一次提交，渲染频率封顶到 ~60fps。
+  const rafRef = useRef<number | null>(null);
+
+  const scheduleReportFlush = useCallback(() => {
+    if (rafRef.current != null) return;
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null;
+      setReport(reportRef.current);
+    });
+  }, []);
+
+  const flushReportNow = useCallback(() => {
+    if (rafRef.current != null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    setReport(reportRef.current);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
 
   const send = useCallback(
     async (prompt: string, context?: string) => {
@@ -198,7 +224,7 @@ export function AssistantConsole() {
           }
           case "token":
             reportRef.current += String(ev.text);
-            setReport(reportRef.current);
+            scheduleReportFlush();
             break;
           case "error":
             setError(String(ev.message));
@@ -226,12 +252,15 @@ export function AssistantConsole() {
         }
       }
 
+      // 收尾：确保最后一批还未提交的增量（不足一帧）也被渲染出来，
+      // 否则 report 状态可能落后于 reportRef.current 最终值几个字符
+      flushReportNow();
       setRunning(false);
       if (reportRef.current.trim()) {
         setMessages((m) => [...m, { role: "assistant", content: reportRef.current }]);
       }
     },
-    [messages, running]
+    [messages, running, scheduleReportFlush, flushReportNow]
   );
 
   // 处理来自个股页的「一键深研」预填
@@ -252,8 +281,10 @@ export function AssistantConsole() {
   }, [params]);
 
   useEffect(() => {
-    reportEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [report]);
+    // 生成中滚动非常频繁，"smooth" 会不断叠加滚动动画造成额外主线程/合成开销；
+    // 生成过程中直接跳转即可，仅在最终定稿时才用平滑滚动收尾
+    reportEndRef.current?.scrollIntoView({ behavior: running ? "auto" : "smooth", block: "end" });
+  }, [report, running]);
 
   // 右侧研报展示：running 时强制看实时；否则可回看历史某条 assistant 报告
   const latestReport =
